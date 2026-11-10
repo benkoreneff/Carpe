@@ -1,0 +1,62 @@
+name: ShotCal
+
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    GENERATE_INFOPLIST_FILE: YES
+    # Signing is fixed on purpose. macOS ties the Screen Recording grant and the
+    # Keychain items to the bundle ID plus the signing identity, so an ad-hoc
+    # signature or a changed bundle ID makes both disappear on the next build.
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: Apple Development
+    DEVELOPMENT_TEAM: 375L8HDHKR
+
+targets:
+  ShotCal:
+    type: application
+    platform: macOS
+    sources:
+      - ShotCal
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.koreneff.ShotCal
+        PRODUCT_NAME: ShotCal
+        ENABLE_HARDENED_RUNTIME: YES
+        INFOPLIST_KEY_LSUIElement: YES
+        INFOPLIST_KEY_CFBundleDisplayName: ShotCal
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+
+  # Logic tests: compiles ShotCal/Core directly, so the tests never launch the
+  # menu bar app or touch the Keychain.
+  ShotCalTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - ShotCalTests
+      - ShotCal/Core
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.koreneff.ShotCalTests
+
+schemes:
+  ShotCal:
+    build:
+      targets:
+        ShotCal: all
+        ShotCalTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - ShotCalTests
