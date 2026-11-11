@@ -10,15 +10,28 @@ import Testing
     static let second = CreatedEvent(id: "evt2", calendarID: "primary", htmlLink: nil)
 
     @Test func survivesTheTripThroughANotification() throws {
-        let capture = SavedCapture(summary: "Tiimipalaveri \"Q4\" 🎉", events: [Self.first, Self.second])
+        let capture = SavedCapture(service: .apple, summary: "Tiimipalaveri \"Q4\" 🎉", events: [Self.first, Self.second])
         let restored = try #require(SavedCapture(encoded: capture.encoded))
         #expect(restored == capture)
+        #expect(restored.service == .apple)
         #expect(restored.events.map(\.calendarID) == ["team@group.calendar.google.com", "primary"])
     }
 
-    @Test func opensTheFirstEventThatHasAPage() {
-        #expect(SavedCapture(summary: "2 events", events: [Self.second, Self.first]).linkToOpen == Self.first.htmlLink)
-        #expect(SavedCapture(summary: "x", events: [Self.second]).linkToOpen == nil)
+    /// Notifications posted before there was a choice of service.
+    @Test func aCaptureThatNamesNoServiceIsFromGoogle() throws {
+        let old = #"{"summary":"Lounas","events":[{"id":"evt1","calendarID":"primary"}]}"#
+        let restored = try #require(SavedCapture(encoded: old))
+        #expect(restored.service == .google)
+        #expect(restored.events == [CreatedEvent(id: "evt1", calendarID: "primary", htmlLink: nil)])
+    }
+
+    @Test func aCaptureFromAnUnknownServiceIsRejected() {
+        #expect(SavedCapture(encoded: #"{"service":"outlook","summary":"x","events":[{"id":"1","calendarID":"c"}]}"#) == nil)
+    }
+
+    @Test func opensTheFirstEventThatHasAPageOrElseTheFirst() {
+        #expect(SavedCapture(service: .google, summary: "2 events", events: [Self.second, Self.first]).eventToOpen == Self.first)
+        #expect(SavedCapture(service: .apple, summary: "x", events: [Self.second]).eventToOpen == Self.second)
     }
 
     @Test func rejectsPayloadsThatAreNotACapture() {

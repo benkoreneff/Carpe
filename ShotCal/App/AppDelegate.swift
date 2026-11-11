@@ -8,22 +8,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let notifier = Notifier()
     private let windows = WindowPresenter()
     private let google = GoogleAccount(store: KeychainStore(), openURL: { NSWorkspace.shared.open($0) })
-    private lazy var pipeline = Pipeline(calendar: { [google] in
-        // Until Google is set up, a run ends in a preview instead of an error.
-        switch google.status {
-        case .notConfigured, .disconnected, .connecting:
-            return StubCalendarService()
-        case .connected, .needsReconnect:
-            return GoogleCalendarService(
-                calendarID: Preferences.calendarID,
-                accessToken: { try await google.accessToken(forceRefresh: $0) }
-            )
-        }
-    }, notifier: notifier)
+    private let apple = AppleCalendarService(openURL: { NSWorkspace.shared.open($0) })
+    private lazy var pipeline = Pipeline(calendar: { [unowned self] in calendar($0) }, notifier: notifier)
+    private let calendarPicker = CalendarPicker()
     private var statusItem: StatusItemController?
     private lazy var hotKeys = HotKeyCenter { [weak self] in self?.pipeline.trigger() }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Google was the only service before there was a choice, so a Mac
+        // where it is already set up keeps using it without being asked.
+        if Preferences.chosenCalendarService == nil, google.status != .notConfigured {
+            Preferences.chosenCalendarService = .google
+        }
+
         installEditMenu()
         notifier.activate()
 
@@ -35,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let statusItem = StatusItemController(
             pipeline: pipeline,
             google: google,
+            apple: apple,
             hotKeys: hotKeys,
             actions: .init(
                 capture: { [weak self] in self?.pipeline.trigger() },
@@ -49,16 +47,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pipeline.onChange = { [weak statusItem] in statusItem?.refresh() }
         pipeline.onNeedsScreenRecording = { [weak self] in self?.showPermissions() }
         pipeline.onNeedsAPIKey = { [weak self] in self?.showSettings() }
+        pipeline.onNeedsCalendarAccess = { [weak self] in self?.showPermissions() }
+        pipeline.chooseCalendar = { [calendarPicker] in await calendarPicker.choose($0) }
 
         Task { await showPermissionsIfNeeded() }
     }
 
-    // MARK: - Saved events
+    // MARK: - Calendars
 
-    /// Shows the event's page in the browser. A capture with several events
-    /// opens the first one.
+    private var googleCalendar: GoogleCalendarService {
+        GoogleCalendarService(
+            accessToken: { [google] in try await google.accessToken(forceRefresh: $0) },
+            openURL: { NSWorkspace.shared.open($0) }
+        )
+    }
+
+    /// The service that saves and deletes events of the given kind.
+    private func calendar(_ kind: CalendarServiceKind) -> CalendarService {
+        switch kind {
+        case .apple:
+            return apple
+        case .google:
+            // Until Google is set up, a run ends in a preview instead of an error.
+            switch google.status {
+            case .notConfigured, .disconnected, .connecting: return StubCalendarService()
+            case .connected, .needsReconnect: return googleCalendar
+            }
+        }
+    }
+
+    /// Shows the event in Calendar or on its Google Calendar page. A capture
+    /// with several events opens the first one.
     private func open(_ capture: SavedCapture) {
-        NSWorkspace.shared.open(capture.linkToOpen ?? URL(string: "https://calendar.google.com/")!)
+        guard let event = capture.eventToOpen else { return }
+        switch capture.service {
+        case .apple: apple.open(event)
+        // A page opens in the browser whether or not Google is connected here.
+        case .google: googleCalendar.open(event)
+        }
     }
 
     // MARK: - Google
@@ -82,20 +108,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showSettings() {
         windows.show(id: "settings", title: "ShotCal Settings") {
-            SettingsView(google: google, hotKeys: hotKeys)
+            SettingsView(
+                google: google, apple: apple, hotKeys: hotKeys,
+                googleCalendars: { [googleCalendar] in try await googleCalendar.calendars() }
+            )
         }
     }
 
     private func showPermissions() {
         windows.show(id: "permissions", title: "Welcome to ShotCal") {
-            PermissionsView(notifier: notifier)
+            PermissionsView(
+                notifier: notifier, apple: apple, google: google,
+                showSettings: { [weak self] in self?.showSettings() }
+            )
         }
     }
 
     /// First run, or a permission was taken away since: walk through them.
     private func showPermissionsIfNeeded() async {
         let notifications = await notifier.authorizationStatus()
-        if !Permissions.hasScreenRecording || notifications == .notDetermined {
+        let calendarNeedsSetup = Preferences.chosenCalendarService == nil
+            || (Preferences.calendarService == .apple && apple.access != .granted)
+        if !Permissions.hasScreenRecording || notifications == .notDetermined || calendarNeedsSetup {
             showPermissions()
         }
     }

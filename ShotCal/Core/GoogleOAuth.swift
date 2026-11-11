@@ -8,8 +8,13 @@ enum GoogleOAuth {
     static let tokenEndpoint = URL(string: "https://oauth2.googleapis.com/token")!
     static let revocationEndpoint = URL(string: "https://oauth2.googleapis.com/revoke")!
 
-    /// The only scope ShotCal asks for: create, read and delete events.
-    static let scope = "https://www.googleapis.com/auth/calendar.events"
+    /// Create, read and delete events. Nothing works without it.
+    static let eventsScope = "https://www.googleapis.com/auth/calendar.events"
+    /// "See the list of Google calendars you're subscribed to": the narrowest
+    /// of the four scopes calendarList.list accepts. Only the calendar picker
+    /// needs it. https://developers.google.com/workspace/calendar/api/auth
+    static let calendarListScope = "https://www.googleapis.com/auth/calendar.calendarlist.readonly"
+    static let scopes = [eventsScope, calendarListScope]
 
     /// Proof Key for Code Exchange (RFC 7636), method S256.
     struct PKCE: Equatable, Sendable {
@@ -41,7 +46,7 @@ enum GoogleOAuth {
             ("client_id", clientID),
             ("redirect_uri", redirectURI),
             ("response_type", "code"),
-            ("scope", scope),
+            ("scope", scopes.joined(separator: " ")),
             ("code_challenge", challenge),
             ("code_challenge_method", "S256"),
             ("state", state),

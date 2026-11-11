@@ -14,7 +14,7 @@ BIN     := $(APP)/Contents/MacOS/ShotCal
 XCB     := xcodebuild -project ShotCal.xcodeproj -scheme ShotCal -configuration $(CONFIG) \
            -derivedDataPath $(DERIVED) -destination 'platform=macOS,arch=$(shell uname -m)'
 
-.PHONY: gen build test run stop verify-signing extract install clean
+.PHONY: gen build test run stop verify-signing extract install clean check-secrets release
 
 gen:
 	xcodegen generate --quiet
@@ -42,8 +42,9 @@ run: build stop
 	open "$(APP)"
 
 # Stage 2 check without the hotkey: make extract IMG=path/to/screenshot.png
+# Add CALENDARS="Work,Home" to also get a suggested calendar.
 extract: build
-	"$(BIN)" --extract "$(IMG)"
+	"$(BIN)" --extract "$(IMG)" $(if $(CALENDARS),--calendars "$(CALENDARS)")
 
 # Puts an optimised build in /Applications and starts it. Use this copy for
 # launch at login: the one in build/ disappears with `make clean`.
@@ -55,5 +56,13 @@ install:
 	ditto "$(DERIVED)/Build/Products/Release/ShotCal.app" "$(INSTALLED)"
 	open "$(INSTALLED)"
 
+# Looks for API keys, client secrets and tokens in the files and the git history.
+check-secrets:
+	@scripts/check-secrets.sh
+
+# A notarized ShotCal-<version>.dmg in dist/, for other people's Macs.
+release:
+	@scripts/release.sh
+
 clean:
-	rm -rf $(DERIVED) ShotCal.xcodeproj
+	rm -rf $(DERIVED) dist ShotCal.xcodeproj

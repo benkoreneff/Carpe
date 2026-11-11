@@ -32,6 +32,10 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.koreneff.ShotCal
         PRODUCT_NAME: ShotCal
         ENABLE_HARDENED_RUNTIME: YES
+        # Apple Calendar: the entitlement lets EventKit work under the hardened
+        # runtime, and macOS shows the text when it asks for calendar access.
+        CODE_SIGN_ENTITLEMENTS: ShotCal/ShotCal.entitlements
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "ShotCal adds the events it reads from your screenshots to the calendar you choose, and removes one again when you choose Undo."
         INFOPLIST_KEY_LSUIElement: YES
         INFOPLIST_KEY_CFBundleDisplayName: ShotCal
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity

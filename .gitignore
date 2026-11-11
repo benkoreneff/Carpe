@@ -3,6 +3,8 @@ ShotCal.xcodeproj/
 
 # Build output
 build/
+# Disk images from scripts/release.sh
+dist/
 DerivedData/
 *.xcuserstate
 xcuserdata/

@@ -16,12 +16,16 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let icon: NSImage?
     private let pipeline: Pipeline
     private let google: GoogleAccount
+    private let apple: AppleCalendarService
     private let hotKeys: HotKeyCenter
     private let actions: Actions
 
-    init(pipeline: Pipeline, google: GoogleAccount, hotKeys: HotKeyCenter, actions: Actions) {
+    init(
+        pipeline: Pipeline, google: GoogleAccount, apple: AppleCalendarService, hotKeys: HotKeyCenter, actions: Actions
+    ) {
         self.pipeline = pipeline
         self.google = google
+        self.apple = apple
         self.hotKeys = hotKeys
         self.actions = actions
 
@@ -100,18 +104,33 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
-        switch google.status {
-        case .notConfigured: add("Set Up Google Calendar…", #selector(connectGoogle), to: menu)
-        case .disconnected: add("Connect Google…", #selector(connectGoogle), to: menu)
-        case .needsReconnect: add("Reconnect Google…", #selector(connectGoogle), to: menu)
-        case .connecting: menu.addItem(info("Waiting for the Google sign-in…"))
-        case .connected: break
+        // Only the selected service gets a line here.
+        switch Preferences.calendarService {
+        case .apple:
+            if apple.access != .granted {
+                add("Allow Calendar Access…", #selector(showPermissions), to: menu)
+            }
+        case .google:
+            switch google.status {
+            case .notConfigured: add("Set Up Google Calendar…", #selector(connectGoogle), to: menu)
+            case .disconnected: add("Connect Google…", #selector(connectGoogle), to: menu)
+            case .needsReconnect: add("Reconnect Google…", #selector(connectGoogle), to: menu)
+            case .connecting: menu.addItem(info("Waiting for the Google sign-in…"))
+            case .connected: break
+            }
         }
         add("Settings…", #selector(showSettings), to: menu).keyEquivalent = ","
         add("Permissions…", #selector(showPermissions), to: menu)
         menu.addItem(.separator())
+        menu.addItem(info(Self.versionLine))
         let quit = menu.addItem(withTitle: "Quit ShotCal", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quit.target = NSApp
+    }
+
+    /// "ShotCal 0.1.0", so a user can say which copy they are running.
+    private static var versionLine: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        return "ShotCal \(version ?? "(unknown version)")"
     }
 
     @discardableResult

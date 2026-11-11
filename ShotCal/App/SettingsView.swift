@@ -1,14 +1,30 @@
 import SwiftUI
 
-/// Everything the user can set: the two services, the shortcut, and launch at
-/// login. Secrets go to the Keychain, the rest to UserDefaults.
+/// Everything the user can set: Claude, the calendar service, the shortcut,
+/// and launch at login. Secrets go to the Keychain, the rest to UserDefaults.
 struct SettingsView: View {
     let google: GoogleAccount
+    let apple: AppleCalendarService
     let hotKeys: HotKeyCenter
+    /// The calendars of the connected Google account.
+    let googleCalendars: () async throws -> [CalendarInfo]
 
     @State private var apiKey = Keychain.get(.anthropicAPIKey) ?? ""
     @State private var apiKeyStatus: String?
     @AppStorage(Preferences.Key.modelID) private var modelID = Preferences.defaultModelID
+
+    /// Empty until a service has been chosen; shared with the welcome window.
+    @AppStorage(Preferences.Key.calendarService) private var storedService = ""
+
+    @State private var appleAccess = AppleCalendarAccess.notDetermined
+    @State private var appleCalendars: [CalendarInfo] = []
+    @State private var appleMessage: String?
+    @AppStorage(Preferences.Key.appleCalendarID) private var appleCalendarID = ""
+    @AppStorage(Preferences.Key.askForCalendar) private var askForCalendar = false
+
+    @State private var googleCalendarList: [CalendarInfo] = []
+    /// Why the Google calendars can't be listed, when they can't.
+    @State private var googleListProblem: String?
 
     @State private var clientID = ""
     @State private var clientSecret = ""
@@ -33,22 +49,19 @@ struct SettingsView: View {
             }
 
             Section {
-                TextField("Client ID", text: $clientID, prompt: Text("….apps.googleusercontent.com"))
-                    .disabled(credentialsLocked)
-                SecureField("Client secret", text: $clientSecret, prompt: Text("GOCSPX-…"))
-                    .disabled(credentialsLocked)
-                LabeledContent("Status") {
-                    HStack {
-                        Text(statusText).foregroundStyle(google.status == .needsReconnect ? .orange : .secondary)
-                        Spacer()
-                        googleButton
-                    }
+                Picker("Calendar service", selection: service) {
+                    ForEach(CalendarServiceKind.allCases) { Text($0.displayName).tag($0) }
                 }
-                TextField("Calendar ID", text: $calendarID, prompt: Text(Preferences.defaultCalendarID))
+                // Only the selected service's settings are shown.
+                switch service.wrappedValue {
+                case .apple: appleRows
+                case .google: googleRows
+                }
+                Toggle("Ask which calendar every time", isOn: $askForCalendar)
             } header: {
-                Text("Google Calendar")
+                Text("Calendar")
             } footer: {
-                Text(googleMessage ?? "Events go to the calendar with this ID. \"primary\" is the account's main calendar.")
+                Text(calendarFooter)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -75,6 +88,110 @@ struct SettingsView: View {
         .onAppear {
             clientID = google.clientID
             clientSecret = google.clientSecret
+        }
+        .task(id: service.wrappedValue) { await refreshApple() }
+        .task(id: googleListKey) { await refreshGoogleCalendars() }
+        // Back from System Settings: the calendar permission may have changed.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { await refreshApple() }
+        }
+    }
+
+    // MARK: - Calendar service
+
+    private var service: Binding<CalendarServiceKind> {
+        Binding(
+            get: { CalendarServiceKind(rawValue: storedService) ?? Preferences.calendarService },
+            set: { storedService = $0.rawValue }
+        )
+    }
+
+    private var calendarFooter: String {
+        let asking = "After reading a screenshot, ShotCal shows your calendars with Claude's suggestion selected, "
+            + "or else the one used last. The calendar names are sent to Claude along with the screenshot."
+        switch service.wrappedValue {
+        case .apple:
+            return appleMessage ?? (askForCalendar
+                ? asking
+                : "Events go to the default calendar. Calendars that can't be changed aren't listed.")
+        case .google:
+            if let message = googleMessage ?? googleListProblem { return message }
+            if askForCalendar { return asking }
+            return googleCalendarList.isEmpty
+                ? "Events go to the calendar with this ID. \"primary\" is the account's main calendar."
+                : "Events go to the default calendar."
+        }
+    }
+
+    // MARK: - Apple Calendar
+
+    @ViewBuilder private var appleRows: some View {
+        LabeledContent("Access") {
+            HStack {
+                Text(appleAccessText).foregroundStyle(appleAccess == .granted ? Color.secondary : Color.orange)
+                Spacer()
+                switch appleAccess {
+                case .granted, .restricted:
+                    EmptyView()
+                case .notDetermined:
+                    Button("Allow Access") {
+                        Task {
+                            await apple.requestAccess()
+                            await refreshApple()
+                        }
+                    }
+                case .denied, .addOnly:
+                    Button("Open Calendar Settings") { Permissions.openCalendarSettings() }
+                }
+            }
+        }
+        if appleAccess == .granted, !appleCalendars.isEmpty {
+            Picker("Default calendar", selection: appleCalendar) {
+                ForEach(appleCalendars) { calendar in
+                    Text(calendar.account.map { "\(calendar.title) (\($0))" } ?? calendar.title).tag(calendar.id)
+                }
+            }
+        }
+    }
+
+    private var appleAccessText: String {
+        switch appleAccess {
+        case .notDetermined: "Not allowed yet"
+        case .granted: "Allowed"
+        case .addOnly: "Add Only; ShotCal needs Full Access"
+        case .denied: "Switched off"
+        case .restricted: "Restricted on this Mac"
+        }
+    }
+
+    /// Shows the Calendar app's default until a calendar has been picked.
+    private var appleCalendar: Binding<String> {
+        Binding(
+            get: {
+                if !appleCalendarID.isEmpty { return appleCalendarID }
+                return (appleCalendars.first(where: \.isDefault) ?? appleCalendars.first)?.id ?? ""
+            },
+            set: { appleCalendarID = $0 }
+        )
+    }
+
+    private func refreshApple() async {
+        appleAccess = apple.access
+        guard service.wrappedValue == .apple, appleAccess == .granted else {
+            appleCalendars = []
+            return
+        }
+        do {
+            appleCalendars = try await apple.calendars()
+            appleMessage = nil
+            // A deleted calendar would make every capture fail; go back to the default.
+            if !appleCalendarID.isEmpty, !appleCalendars.contains(where: { $0.id == appleCalendarID }) {
+                appleCalendarID = ""
+                appleMessage = "The calendar chosen earlier no longer exists, so events go to the default one for now."
+            }
+        } catch {
+            appleCalendars = []
+            appleMessage = error.localizedDescription
         }
     }
 
@@ -111,6 +228,64 @@ struct SettingsView: View {
     }
 
     // MARK: - Google
+
+    @ViewBuilder private var googleRows: some View {
+        TextField("Client ID", text: $clientID, prompt: Text("….apps.googleusercontent.com"))
+            .disabled(credentialsLocked)
+        SecureField("Client secret", text: $clientSecret, prompt: Text("GOCSPX-…"))
+            .disabled(credentialsLocked)
+        LabeledContent("Status") {
+            HStack {
+                Text(statusText).foregroundStyle(google.status == .needsReconnect ? .orange : .secondary)
+                Spacer()
+                googleButton
+            }
+        }
+        if googleCalendarList.isEmpty {
+            // Not connected, or a sign-in that can't list calendars: the ID
+            // can still be typed.
+            TextField("Calendar ID", text: $calendarID, prompt: Text(Preferences.defaultCalendarID))
+        } else {
+            Picker("Default calendar", selection: googleCalendar) {
+                ForEach(googleCalendarList) { Text($0.title).tag($0.id) }
+                // A typed ID that isn't in the account's list is kept as it is.
+                if !googleCalendarList.contains(where: { $0.id == googleCalendar.wrappedValue }) {
+                    Text(googleCalendar.wrappedValue).tag(googleCalendar.wrappedValue)
+                }
+            }
+        }
+    }
+
+    /// "primary" and an empty field both mean the account's main calendar.
+    private var googleCalendar: Binding<String> {
+        Binding(
+            get: {
+                let stored = calendarID.trimmingCharacters(in: .whitespacesAndNewlines)
+                if stored.isEmpty || stored == Preferences.defaultCalendarID {
+                    return googleCalendarList.first(where: \.isDefault)?.id ?? Preferences.defaultCalendarID
+                }
+                return stored
+            },
+            set: { calendarID = $0 }
+        )
+    }
+
+    /// Reload the list when the service or the connection changes.
+    private var googleListKey: String { "\(service.wrappedValue.rawValue) \(google.status)" }
+
+    private func refreshGoogleCalendars() async {
+        googleListProblem = nil
+        guard service.wrappedValue == .google, google.status == .connected else {
+            googleCalendarList = []
+            return
+        }
+        do {
+            googleCalendarList = try await googleCalendars()
+        } catch {
+            googleCalendarList = []
+            googleListProblem = error.localizedDescription
+        }
+    }
 
     /// The client can't change under a live connection; disconnect first.
     private var credentialsLocked: Bool {

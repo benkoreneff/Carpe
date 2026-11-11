@@ -172,7 +172,9 @@ final class GoogleAccount {
         guard let refreshToken = reply.refresh_token, !refreshToken.isEmpty else {
             throw GoogleAuthError.noRefreshToken
         }
-        if let granted = reply.scope, !granted.split(separator: " ").contains(Substring(GoogleOAuth.scope)) {
+        // The consent screen lets each scope be unticked. Events are required;
+        // without the calendar list only the picker is unavailable.
+        if let granted = reply.scope, !granted.split(separator: " ").contains(Substring(GoogleOAuth.eventsScope)) {
             throw GoogleAuthError.scopeNotGranted
         }
 

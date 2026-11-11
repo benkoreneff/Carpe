@@ -16,6 +16,10 @@ enum Permissions {
         open("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
     }
 
+    static func openCalendarSettings() {
+        open("x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")
+    }
+
     static func openNotificationSettings() {
         let bundleID = Bundle.main.bundleIdentifier ?? ""
         open("x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(bundleID)")

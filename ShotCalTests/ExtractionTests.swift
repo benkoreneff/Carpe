@@ -36,8 +36,41 @@ import Testing
         #expect(prompt.contains("Today is Friday 2027-01-01"))
     }
 
+    @Test func withoutCalendarsThePromptAndSchemaSayNothingAboutThem() {
+        let prompt = ExtractionPrompt.system(now: Self.now, timeZone: Self.helsinki)
+        #expect(!prompt.contains("suggested_calendar"))
+        #expect(prompt == ExtractionPrompt.system(now: Self.now, timeZone: Self.helsinki, calendarNames: []))
+
+        let properties = ExtractionPrompt.schema()["properties"] as? [String: Any]
+        #expect(properties?["suggested_calendar"] == nil)
+    }
+
+    @Test func calendarNamesAreListedInThePrompt() {
+        let prompt = ExtractionPrompt.system(
+            now: Self.now, timeZone: Self.helsinki, calendarNames: ["Työ", "Koti (iCloud)", #"Lasten "harkat""#]
+        )
+        #expect(prompt.contains(#"The user's calendars are: "Työ", "Koti (iCloud)", "Lasten \"harkat\"". "#))
+        #expect(prompt.contains("`suggested_calendar`"))
+        // The date context is still there.
+        #expect(prompt.contains("Today is Tuesday 2026-11-10"))
+    }
+
+    @Test func suggestedCalendarMustBeOneOfTheNamesOrNull() throws {
+        let schema = ExtractionPrompt.schema(calendarNames: ["Työ", "Koti"])
+        #expect(Set(schema["required"] as? [String] ?? []) == ["events", "reason_if_none", "suggested_calendar"])
+
+        let properties = try #require(schema["properties"] as? [String: Any])
+        let suggestion = try #require(properties["suggested_calendar"] as? [String: Any])
+        let options = try #require(suggestion["anyOf"] as? [[String: Any]])
+        #expect(options.count == 2)
+        #expect(options[0]["type"] as? String == "string")
+        #expect(options[0]["enum"] as? [String] == ["Työ", "Koti"])
+        #expect(options[1]["type"] as? String == "null")
+        _ = try JSONSerialization.data(withJSONObject: schema)
+    }
+
     @Test func schemaMeetsStructuredOutputRules() throws {
-        let schema = ExtractionPrompt.schema
+        let schema = ExtractionPrompt.schema()
         #expect(schema["additionalProperties"] as? Bool == false)
         #expect(Set(schema["required"] as? [String] ?? []) == ["events", "reason_if_none"])
 
@@ -208,6 +241,61 @@ import Testing
         let result = try await api.client().extractEvents(from: Self.image, now: Self.now, timeZone: Self.utc)
         #expect(result.extraction.events.count == 1)
         #expect(api.requests.count == 2)
+    }
+
+    // Suggested calendar
+
+    static func reply(suggesting calendar: String?) -> String {
+        let value = calendar.map { "\"\($0)\"" } ?? "null"
+        return String(oneEvent.dropLast()) + #","suggested_calendar":\#(value)}"#
+    }
+
+    @Test func calendarNamesGoIntoThePromptAndTheSchema() async throws {
+        let api = FakeAPI([(200, Self.message(text: Self.reply(suggesting: "Työ")))])
+        let result = try await api.client()
+            .extractEvents(from: Self.image, now: Self.now, timeZone: Self.utc, calendarNames: ["Työ", "Koti"])
+
+        #expect(result.extraction.suggestedCalendar == "Työ")
+        #expect(result.extraction.events.map(\.title) == ["Demo"])
+
+        let body = try #require(api.bodies.first)
+        #expect((body["system"] as? String)?.contains(#"The user's calendars are: "Työ", "Koti"."#) == true)
+        let config = try #require(body["output_config"] as? [String: Any])
+        let format = try #require(config["format"] as? [String: Any])
+        let schema = try #require(format["schema"] as? [String: Any])
+        let properties = try #require(schema["properties"] as? [String: Any])
+        #expect(properties["suggested_calendar"] != nil)
+    }
+
+    @Test func noSuggestionIsNil() async throws {
+        let api = FakeAPI([(200, Self.message(text: Self.reply(suggesting: nil)))])
+        let result = try await api.client()
+            .extractEvents(from: Self.image, now: Self.now, timeZone: Self.utc, calendarNames: ["Työ", "Koti"])
+        #expect(result.extraction.suggestedCalendar == nil)
+    }
+
+    /// Only the plain-JSON fallback can do this; the schema rules it out.
+    @Test func aSuggestionThatIsNotOneOfTheNamesIsDropped() async throws {
+        let api = FakeAPI([
+            (400, Self.apiError("output_config.format: structured outputs are not supported by this model")),
+            (200, Self.message(text: Self.reply(suggesting: "Work stuff"))),
+        ])
+        let result = try await api.client(model: "some-older-model")
+            .extractEvents(from: Self.image, now: Self.now, timeZone: Self.utc, calendarNames: ["Työ", "Koti"])
+
+        #expect(result.extraction.suggestedCalendar == nil)
+        #expect(result.extraction.events.map(\.title) == ["Demo"])
+        // The fallback prompt carries the same schema, names included.
+        #expect((api.bodies.last?["system"] as? String)?.contains(#""enum":["Työ","Koti"]"#) == true)
+    }
+
+    @Test func withoutCalendarNamesTheRequestHasNoSuggestionField() async throws {
+        let api = FakeAPI([(200, Self.message(text: Self.oneEvent))])
+        let result = try await api.client().extractEvents(from: Self.image, now: Self.now, timeZone: Self.utc)
+
+        #expect(result.extraction.suggestedCalendar == nil)
+        let body = try #require(api.bodies.first)
+        #expect((body["system"] as? String)?.contains("suggested_calendar") == false)
     }
 
     @Test func fallsBackToPlainJSONWhenTheModelRejectsOutputConfig() async throws {

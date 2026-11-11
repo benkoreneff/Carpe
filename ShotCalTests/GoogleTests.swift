@@ -54,7 +54,7 @@ func query(of url: URL) -> [String: String] {
         #expect(first != second)
     }
 
-    @Test func authorizationURLAsksForTheEventsScopeOnlyWithPKCE() {
+    @Test func authorizationURLAsksForEventsAndTheCalendarListWithPKCE() {
         let url = GoogleOAuth.authorizationURL(
             clientID: "abc.apps.googleusercontent.com", redirectURI: "http://127.0.0.1:51234",
             challenge: "the-challenge", state: "the-state"
@@ -62,7 +62,9 @@ func query(of url: URL) -> [String: String] {
         #expect(url.absoluteString.hasPrefix("https://accounts.google.com/o/oauth2/v2/auth?"))
 
         let fields = query(of: url)
-        #expect(fields["scope"] == "https://www.googleapis.com/auth/calendar.events")
+        // Events, plus the narrowest scope that can list calendars. Nothing broader.
+        #expect(fields["scope"] == "https://www.googleapis.com/auth/calendar.events "
+            + "https://www.googleapis.com/auth/calendar.calendarlist.readonly")
         #expect(fields["client_id"] == "abc.apps.googleusercontent.com")
         #expect(fields["redirect_uri"] == "http://127.0.0.1:51234")
         #expect(fields["response_type"] == "code")
@@ -454,8 +456,8 @@ func query(of url: URL) -> [String: String] {
         }
     }
 
-    static func service(_ http: FakeHTTP, _ tokens: Tokens = Tokens(), calendarID: String = "primary") -> GoogleCalendarService {
-        GoogleCalendarService(calendarID: calendarID, accessToken: tokens.token, transport: http.transport)
+    static func service(_ http: FakeHTTP, _ tokens: Tokens = Tokens()) -> GoogleCalendarService {
+        GoogleCalendarService(accessToken: tokens.token, transport: http.transport)
     }
 
     // Event bodies
@@ -502,7 +504,7 @@ func query(of url: URL) -> [String: String] {
 
     @Test func insertPostsTheEventAndReturnsItsIDAndLink() async throws {
         let http = FakeHTTP([(200, Self.created)])
-        let event = try await Self.service(http).insert(Self.meeting)
+        let event = try await Self.service(http).insert(Self.meeting, into: nil)
 
         #expect(event == CreatedEvent(
             id: "evt123", calendarID: "primary",
@@ -516,6 +518,15 @@ func query(of url: URL) -> [String: String] {
         #expect(http.json(0)["summary"] as? String == "Tiimipalaveri")
     }
 
+    @Test func insertGoesToTheNamedCalendar() async throws {
+        let http = FakeHTTP([(200, Self.created)])
+        let event = try await Self.service(http).insert(Self.meeting, into: "team@group.calendar.google.com")
+
+        #expect(event.calendarID == "team@group.calendar.google.com")
+        #expect(http.requests[0].url?.absoluteString ==
+            "https://www.googleapis.com/calendar/v3/calendars/team%40group.calendar.google.com/events")
+    }
+
     @Test func calendarIDIsEscapedInThePath() {
         let url = GoogleCalendarService.eventsURL(calendarID: "abc#123@group.calendar.google.com", eventID: "evt 1")
         #expect(url.absoluteString ==
@@ -525,7 +536,7 @@ func query(of url: URL) -> [String: String] {
     @Test func aRejectedTokenIsRefreshedOnceAndTheRequestRepeated() async throws {
         let http = FakeHTTP([(401, #"{"error":{"code":401,"message":"Invalid Credentials"}}"#), (200, Self.created)])
         let tokens = Tokens()
-        let event = try await Self.service(http, tokens).insert(Self.meeting)
+        let event = try await Self.service(http, tokens).insert(Self.meeting, into: nil)
 
         #expect(event.id == "evt123")
         #expect(tokens.calls == [false, true])
@@ -534,9 +545,9 @@ func query(of url: URL) -> [String: String] {
 
     @Test func anUnknownCalendarIsNamedInTheError() async {
         let http = FakeHTTP([(404, #"{"error":{"code":404,"message":"Not Found"}}"#)])
-        let service = Self.service(http, calendarID: "nope@group.calendar.google.com")
+        let service = Self.service(http)
         await #expect(throws: GoogleCalendarError.calendarNotFound("nope@group.calendar.google.com")) {
-            try await service.insert(Self.meeting)
+            try await service.insert(Self.meeting, into: "nope@group.calendar.google.com")
         }
     }
 
@@ -544,7 +555,7 @@ func query(of url: URL) -> [String: String] {
         let message = "Google Calendar API has not been used in project 123 before or it is disabled."
         let http = FakeHTTP([(403, #"{"error":{"code":403,"message":"\#(message)"}}"#)])
         let error = await #expect(throws: GoogleCalendarError.self) {
-            try await Self.service(http).insert(Self.meeting)
+            try await Self.service(http).insert(Self.meeting, into: nil)
         }
         #expect(error == .api(status: 403, message: message))
         #expect(error?.localizedDescription.contains("has not been used in project") == true)
@@ -573,5 +584,87 @@ func query(of url: URL) -> [String: String] {
         await #expect(throws: GoogleCalendarError.api(status: 500, message: "")) {
             try await Self.service(failing).delete(created)
         }
+    }
+
+    // Calendar list
+
+    @Test func calendarsListsWritableOnesWithTheMainOneFirst() async throws {
+        let http = FakeHTTP([(200, #"""
+        {"items":[
+          {"id":"team@group.calendar.google.com","summary":"Tiimi","backgroundColor":"#16a765","accessRole":"writer"},
+          {"id":"shared@group.calendar.google.com","summary":"Their name","summaryOverride":"Asiakkaat","accessRole":"writer"},
+          {"id":"ben@example.com","summary":"ben@example.com","backgroundColor":"#9fe1e7","primary":true,"accessRole":"owner"}
+        ]}
+        """#)])
+        let calendars = try await Self.service(http).calendars()
+
+        #expect(calendars == [
+            CalendarInfo(id: "ben@example.com", title: "ben@example.com", colorHex: "#9FE1E7", isDefault: true),
+            CalendarInfo(id: "shared@group.calendar.google.com", title: "Asiakkaat"),
+            CalendarInfo(id: "team@group.calendar.google.com", title: "Tiimi", colorHex: "#16A765"),
+        ])
+        let request = http.requests[0]
+        #expect(request.httpMethod == "GET")
+        #expect(request.url?.path == "/calendar/v3/users/me/calendarList")
+        #expect(query(of: request.url!) == ["minAccessRole": "writer", "maxResults": "250"])
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer cached-token")
+    }
+
+    @Test func calendarsFollowsEveryPage() async throws {
+        let http = FakeHTTP([
+            (200, #"{"items":[{"id":"a","summary":"A"}],"nextPageToken":"page 2"}"#),
+            (200, #"{"items":[{"id":"b","summary":"B"}]}"#),
+        ])
+        let calendars = try await Self.service(http).calendars()
+
+        #expect(calendars.map(\.id) == ["a", "b"])
+        #expect(http.requests.count == 2)
+        #expect(query(of: http.requests[1].url!)["pageToken"] == "page 2")
+    }
+
+    /// A sign-in from before the picker, or one where the box was unticked.
+    @Test func aSignInWithoutTheListScopeAsksForAReconnect() async {
+        let replies = [
+            #"{"error":{"code":403,"message":"Request had insufficient authentication scopes.","status":"PERMISSION_DENIED"}}"#,
+            #"{"error":{"code":403,"message":"Insufficient Permission","errors":[{"reason":"insufficientPermissions"}]}}"#,
+            #"{"error":{"code":403,"message":"Denied","details":[{"reason":"ACCESS_TOKEN_SCOPE_INSUFFICIENT"}]}}"#,
+        ]
+        for reply in replies {
+            let http = FakeHTTP([(403, reply)])
+            let error = await #expect(throws: GoogleCalendarError.self) {
+                try await Self.service(http).calendars()
+            }
+            #expect(error == .calendarListNotAllowed)
+            #expect(error?.localizedDescription.contains("Disconnect") == true)
+        }
+    }
+
+    @Test func otherCalendarListFailuresKeepTheirOwnMessage() async {
+        let message = "Google Calendar API has not been used in project 123 before or it is disabled."
+        let http = FakeHTTP([
+            (403, #"{"error":{"code":403,"message":"\#(message)","errors":[{"reason":"accessNotConfigured"}]}}"#),
+            (404, ""),
+        ])
+        await #expect(throws: GoogleCalendarError.api(status: 403, message: message)) {
+            try await Self.service(http).calendars()
+        }
+        // Not "no calendar with the ID…": the list isn't about one calendar.
+        await #expect(throws: GoogleCalendarError.api(status: 404, message: "")) {
+            try await Self.service(http).calendars()
+        }
+    }
+
+    // Open
+
+    @Test func openShowsTheEventsPageOrElseGoogleCalendar() {
+        var opened: [URL] = []
+        var service = Self.service(FakeHTTP())
+        service.openURL = { opened.append($0) }
+
+        let page = URL(string: "https://www.google.com/calendar/event?eid=abc")!
+        service.open(CreatedEvent(id: "evt1", calendarID: "primary", htmlLink: page))
+        service.open(CreatedEvent(id: "evt2", calendarID: "primary", htmlLink: nil))
+
+        #expect(opened == [page, URL(string: "https://calendar.google.com/")!])
     }
 }

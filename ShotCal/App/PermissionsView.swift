@@ -1,10 +1,17 @@
 import SwiftUI
 import UserNotifications
 
-/// First-run walkthrough for the two permissions ShotCal needs.
+/// First-run walkthrough: where events are saved, and the permissions ShotCal
+/// needs. Also under Permissions… in the menu.
 struct PermissionsView: View {
     let notifier: Notifier
+    let apple: AppleCalendarService
+    let google: GoogleAccount
+    let showSettings: () -> Void
 
+    /// Empty until a service has been chosen; shared with Settings.
+    @AppStorage(Preferences.Key.calendarService) private var storedService = ""
+    @State private var calendarAccess = AppleCalendarAccess.notDetermined
     @State private var hasScreenRecording = Permissions.hasScreenRecording
     @State private var askedForScreenRecording = false
     @State private var notifications: UNAuthorizationStatus = .notDetermined
@@ -13,8 +20,27 @@ struct PermissionsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("ShotCal needs two permissions")
+            Text("Set up ShotCal")
                 .font(.title2.weight(.semibold))
+
+            step(
+                granted: calendarReady,
+                title: "Calendar",
+                detail: "Choose where the events you capture are saved."
+            ) {
+                Picker("Calendar service", selection: $storedService) {
+                    ForEach(CalendarServiceKind.allCases) { Text($0.displayName).tag($0.rawValue) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+
+                switch service {
+                case .apple: appleControls
+                case .google: googleControls
+                case nil: EmptyView()
+                }
+            }
 
             step(
                 granted: hasScreenRecording,
@@ -31,9 +57,7 @@ struct PermissionsView: View {
                         askedForScreenRecording = true
                     }
                     if askedForScreenRecording {
-                        Text("Switch ShotCal on in the list, then relaunch. macOS applies the change only to a fresh launch.")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
+                        note("Switch ShotCal on in the list, then relaunch. macOS applies the change only to a fresh launch.")
                         Button("Relaunch ShotCal") { Permissions.relaunch() }
                     }
                 }
@@ -55,20 +79,76 @@ struct PermissionsView: View {
                         }
                     }
                 default:
-                    Text("Notifications are switched off for ShotCal.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                    note("Notifications are switched off for ShotCal.")
                     Button("Open Notification Settings") { Permissions.openNotificationSettings() }
                 }
             }
         }
         .padding(24)
         .frame(width: 460, alignment: .leading)
-        .task { notifications = await notifier.authorizationStatus() }
+        .task {
+            calendarAccess = apple.access
+            notifications = await notifier.authorizationStatus()
+        }
         .onReceive(poll) { _ in
+            calendarAccess = apple.access
             hasScreenRecording = Permissions.hasScreenRecording
             Task { notifications = await notifier.authorizationStatus() }
         }
+    }
+
+    // MARK: - Calendar
+
+    private var service: CalendarServiceKind? { CalendarServiceKind(rawValue: storedService) }
+
+    private var calendarReady: Bool {
+        switch service {
+        case .apple: calendarAccess == .granted
+        case .google: google.status == .connected
+        case nil: false
+        }
+    }
+
+    @ViewBuilder private var appleControls: some View {
+        switch calendarAccess {
+        case .granted:
+            EmptyView()
+        case .notDetermined:
+            note("ShotCal needs full access: it lists your calendars, adds events, and removes one when you choose Undo.")
+            Button("Allow Calendar Access") {
+                Task { calendarAccess = await apple.requestAccess() }
+            }
+        case .denied:
+            note("Calendar access is switched off for ShotCal.")
+            Button("Open Calendar Settings") { Permissions.openCalendarSettings() }
+        case .addOnly:
+            note("ShotCal is set to Add Only. Change it to Full Access so it can list your calendars and undo.")
+            Button("Open Calendar Settings") { Permissions.openCalendarSettings() }
+        case .restricted:
+            note("Calendar access is restricted on this Mac, so Apple Calendar can't be used here.")
+        }
+    }
+
+    @ViewBuilder private var googleControls: some View {
+        switch google.status {
+        case .connected:
+            EmptyView()
+        case .needsReconnect:
+            note("The Google sign-in has expired.")
+            Button("Open Settings", action: showSettings)
+        case .notConfigured, .disconnected, .connecting:
+            note("Google Calendar needs your own Google client ID and a sign-in.")
+            Button("Open Settings", action: showSettings)
+        }
+    }
+
+    // MARK: - Layout
+
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private func step<Controls: View>(
@@ -78,7 +158,7 @@ struct PermissionsView: View {
             Image(systemName: granted ? "checkmark.circle.fill" : "circle")
                 .font(.title2)
                 .foregroundStyle(granted ? Color.green : Color.secondary)
-                .accessibilityLabel(granted ? "Granted" : "Not granted")
+                .accessibilityLabel(granted ? "Done" : "Not done")
             VStack(alignment: .leading, spacing: 8) {
                 Text(title).font(.headline)
                 Text(detail)

@@ -54,21 +54,27 @@ struct Extraction: Codable, Equatable, Sendable {
     var events: [ExtractedEvent]
     /// Why nothing was extracted. Only meaningful when `events` is empty.
     var reasonIfNone: String?
+    /// The calendar Claude would put the events in: one of the names it was
+    /// given, or nil. Always nil when it was given none.
+    var suggestedCalendar: String?
 
     enum CodingKeys: String, CodingKey {
         case events
         case reasonIfNone = "reason_if_none"
+        case suggestedCalendar = "suggested_calendar"
     }
 
-    init(events: [ExtractedEvent], reasonIfNone: String? = nil) {
+    init(events: [ExtractedEvent], reasonIfNone: String? = nil, suggestedCalendar: String? = nil) {
         self.events = events
         self.reasonIfNone = reasonIfNone
+        self.suggestedCalendar = suggestedCalendar
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         events = try c.decodeIfPresent([ExtractedEvent].self, forKey: .events) ?? []
         reasonIfNone = try c.decodeIfPresent(String.self, forKey: .reasonIfNone)
+        suggestedCalendar = try c.decodeIfPresent(String.self, forKey: .suggestedCalendar)
     }
 
     /// Decodes Claude's text output. Tolerates a Markdown code fence, which

@@ -57,14 +57,20 @@ struct ClaudeClient {
     var transport: Transport = { try await URLSession.shared.data(for: $0) }
     var retryDelay: Duration = .seconds(2)
 
-    func extractEvents(from image: PreparedImage, now: Date, timeZone: TimeZone) async throws -> ExtractionResult {
+    /// With `calendarNames`, Claude also says which of those calendars the
+    /// events belong in (`Extraction.suggestedCalendar`).
+    func extractEvents(
+        from image: PreparedImage, now: Date, timeZone: TimeZone, calendarNames: [String] = []
+    ) async throws -> ExtractionResult {
         guard !apiKey.isEmpty else { throw ClaudeError.missingAPIKey }
-        let system = ExtractionPrompt.system(now: now, timeZone: timeZone)
+        let system = ExtractionPrompt.system(now: now, timeZone: timeZone, calendarNames: calendarNames)
+        let schema = ExtractionPrompt.schema(calendarNames: calendarNames)
 
+        var result: ExtractionResult
         do {
-            let text = try await send(Self.requestBody(model: model, system: system, image: image, mode: .structured))
+            let text = try await send(Self.requestBody(model: model, system: system, image: image, schema: schema, mode: .structured))
             do {
-                return ExtractionResult(
+                result = ExtractionResult(
                     extraction: try Extraction.decode(fromModelText: text), rawJSON: text,
                     usedStructuredOutputs: true
                 )
@@ -73,21 +79,30 @@ struct ClaudeClient {
             }
         } catch let error as ClaudeError where Self.meansStructuredOutputsUnavailable(error) {
             // The model ID is editable, and older models reject output_config.
-            return try await extractWithPlainJSON(system: system, image: image)
+            result = try await extractWithPlainJSON(system: system, image: image, schema: schema)
         }
+
+        // The schema enforces this for structured outputs; the plain-JSON
+        // fallback can answer anything.
+        if let suggestion = result.extraction.suggestedCalendar, !calendarNames.contains(suggestion) {
+            result.extraction.suggestedCalendar = nil
+        }
+        return result
     }
 
     // MARK: - Plain-JSON fallback
 
     /// For models without structured outputs: ask for JSON in the prompt,
     /// validate it by decoding, and give the model one chance to correct it.
-    private func extractWithPlainJSON(system: String, image: PreparedImage) async throws -> ExtractionResult {
-        let first = try await send(Self.requestBody(model: model, system: system, image: image, mode: .plainJSON(correcting: nil)))
+    private func extractWithPlainJSON(
+        system: String, image: PreparedImage, schema: [String: Any]
+    ) async throws -> ExtractionResult {
+        let first = try await send(Self.requestBody(model: model, system: system, image: image, schema: schema, mode: .plainJSON(correcting: nil)))
         if let extraction = try? Extraction.decode(fromModelText: first) {
             return ExtractionResult(extraction: extraction, rawJSON: first, usedStructuredOutputs: false)
         }
 
-        let second = try await send(Self.requestBody(model: model, system: system, image: image, mode: .plainJSON(correcting: first)))
+        let second = try await send(Self.requestBody(model: model, system: system, image: image, schema: schema, mode: .plainJSON(correcting: first)))
         do {
             return ExtractionResult(
                 extraction: try Extraction.decode(fromModelText: second), rawJSON: second,
@@ -106,7 +121,10 @@ struct ClaudeClient {
         case plainJSON(correcting: String?)
     }
 
-    static func requestBody(model: String, system: String, image: PreparedImage, mode: Mode) -> [String: Any] {
+    static func requestBody(
+        model: String, system: String, image: PreparedImage,
+        schema: [String: Any] = ExtractionPrompt.schema(), mode: Mode
+    ) -> [String: Any] {
         var system = system
         var userText = ExtractionPrompt.userText
         var body: [String: Any] = ["model": model, "max_tokens": maxTokens]
@@ -115,10 +133,10 @@ struct ClaudeClient {
         case .structured:
             body["output_config"] = [
                 "effort": "low",
-                "format": ["type": "json_schema", "schema": ExtractionPrompt.schema],
+                "format": ["type": "json_schema", "schema": schema],
             ]
         case .plainJSON(let previous):
-            let schema = (try? JSONSerialization.data(withJSONObject: ExtractionPrompt.schema, options: [.sortedKeys]))
+            let schema = (try? JSONSerialization.data(withJSONObject: schema, options: [.sortedKeys]))
                 .map { String(decoding: $0, as: UTF8.self) } ?? "{}"
             system += """
 

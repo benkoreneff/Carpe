@@ -6,8 +6,9 @@ import os
 final class Pipeline {
     private static let log = Logger(subsystem: "com.koreneff.ShotCal", category: "pipeline")
 
-    /// Asked at the start of every run, so connecting Google takes effect at once.
-    private let calendar: () -> CalendarService
+    /// Asked at the start of every run, so a change in Settings takes effect
+    /// at once. Undo asks for the service the capture was saved with.
+    private let calendar: (CalendarServiceKind) -> CalendarService
     private let notifier: Notifier
 
     /// True while the region picker is on screen.
@@ -33,8 +34,11 @@ final class Pipeline {
     var onChange: (() -> Void)?
     var onNeedsScreenRecording: (() -> Void)?
     var onNeedsAPIKey: (() -> Void)?
+    var onNeedsCalendarAccess: (() -> Void)?
+    /// Asks which calendar the events go to. Nil means the user cancelled.
+    var chooseCalendar: ((CalendarPickerRequest) async -> CalendarInfo?)?
 
-    init(calendar: @escaping () -> CalendarService, notifier: Notifier) {
+    init(calendar: @escaping (CalendarServiceKind) -> CalendarService, notifier: Notifier) {
         self.calendar = calendar
         self.notifier = notifier
     }
@@ -106,14 +110,26 @@ final class Pipeline {
             return
         }
 
-        // A dead Google sign-in ends the run here, before the screenshot goes anywhere.
-        let calendar = calendar()
+        // A dead Google sign-in or a refused calendar permission ends the run
+        // here, before the screenshot goes anywhere.
+        let service = Preferences.calendarService
+        let calendar = calendar(service)
         try await calendar.prepare()
+        var calendarID = Preferences.calendarID(for: service)
+
+        // "Ask every time" needs the calendars up front: their names go to
+        // Claude with the screenshot, so it can suggest one.
+        var choices: CalendarChoices?
+        if Preferences.askForCalendar, calendar.savesEvents, chooseCalendar != nil {
+            choices = CalendarChoices(try await calendar.calendars())
+        }
 
         let now = Date()
         let timeZone = TimeZone.current
         let client = ClaudeClient(apiKey: apiKey, model: Preferences.modelID)
-        let result = try await client.extractEvents(from: image, now: now, timeZone: timeZone)
+        let result = try await client.extractEvents(
+            from: image, now: now, timeZone: timeZone, calendarNames: choices?.namesForClaude ?? []
+        )
 
         lastJSON = JSONFormatting.pretty(result.rawJSON)
         // The event text stays out of the persistent log: .info is memory-only.
@@ -131,16 +147,45 @@ final class Pipeline {
 
         let resolver = EventDateResolver(now: now, timeZone: timeZone)
         let events = try result.extraction.events.map(resolver.resolve)
+
+        // One choice covers every event from the screenshot.
+        var calendarName: String?
+        if let choices, !choices.calendars.isEmpty, let chooseCalendar {
+            let request = CalendarPickerRequest(
+                title: Self.summary(of: events),
+                details: Self.pickerDetails(for: events),
+                choices: choices,
+                preselected: choices.preselectedIndex(
+                    suggestion: result.extraction.suggestedCalendar,
+                    lastUsedID: Preferences.lastCalendarID(for: service),
+                    defaultID: calendarID
+                )
+            )
+            guard let chosen = await chooseCalendar(request) else {
+                // Esc: nothing is created, and no notification is needed for
+                // something the user just did.
+                Self.log.notice("Calendar choice cancelled")
+                lastSummary = "Not added: \(Self.summary(of: events))"
+                onChange?()
+                return
+            }
+            calendarID = chosen.id
+            calendarName = choices.label(for: chosen)
+            Preferences.setLastCalendarID(chosen.id, for: service)
+        }
+
         var created: [CreatedEvent] = []
         for event in events {
             do {
-                created.append(try await calendar.insert(event))
+                created.append(try await calendar.insert(event, into: calendarID))
             } catch where !created.isEmpty {
                 // Some are already in the calendar; say which part worked.
                 Self.log.error("Failed after \(created.count) of \(events.count): \(String(describing: error), privacy: .public)")
                 lastSummary = "Added \(created.count) of \(events.count) events"
                 // Undo removes the part that did get saved.
-                let saved = SavedCapture(summary: Self.summary(of: Array(events.prefix(created.count))), events: created)
+                let saved = SavedCapture(
+                    service: service, summary: Self.summary(of: Array(events.prefix(created.count))), events: created
+                )
                 lastSaved = saved
                 show(.needsAttention)
                 notifier.post(
@@ -152,7 +197,20 @@ final class Pipeline {
             }
         }
         Self.log.notice("\(calendar.savesEvents ? "Saved" : "Previewed") \(created.count) event(s)")
-        announce(events, saved: calendar.savesEvents ? SavedCapture(summary: Self.summary(of: events), events: created) : nil)
+        announce(events, calendarName: calendarName, saved: calendar.savesEvents
+            ? SavedCapture(service: service, summary: Self.summary(of: events), events: created)
+            : nil)
+    }
+
+    /// The date lines under the picker's title: the time of a single event, or
+    /// the first few of several.
+    private static func pickerDetails(for events: [ResolvedEvent]) -> [String] {
+        if events.count == 1, let event = events.first {
+            return [EventFormatter.when(event)]
+        }
+        var lines = events.prefix(3).map { EventFormatter.line($0) }
+        if events.count > 3 { lines.append("…and \(events.count - 3) more") }
+        return lines
     }
 
     private static func summary(of events: [ResolvedEvent]) -> String {
@@ -160,10 +218,13 @@ final class Pipeline {
     }
 
     /// `saved` is nil when the calendar was the stub and nothing was stored.
-    private func announce(_ events: [ResolvedEvent], saved: SavedCapture?) {
+    /// `calendarName` is set when the user picked the calendar for this capture.
+    private func announce(_ events: [ResolvedEvent], calendarName: String? = nil, saved: SavedCapture?) {
         let prefix = saved != nil ? "Added" : "Preview, not saved"
         // Without Google the run is only a preview; say how to change that.
-        let hint = saved != nil ? [] : ["Connect Google Calendar in Settings to save events."]
+        let hint = saved != nil
+            ? calendarName.map { ["Calendar: \($0)"] } ?? []
+            : ["Connect Google Calendar in Settings to save events."]
         if let saved { lastSaved = saved }
         show(.success)
 
@@ -193,7 +254,8 @@ final class Pipeline {
                 onChange?()
             }
             do {
-                let calendar = calendar()
+                // The service the events are in, whatever is selected now.
+                let calendar = calendar(capture.service)
                 // The stub would "delete" without touching Google.
                 guard calendar.savesEvents else { throw GoogleAuthError.notConnected }
                 for event in capture.events {
@@ -218,6 +280,7 @@ final class Pipeline {
         lastSummary = "Failed: \(error.localizedDescription)"
         notifier.post(title: "Couldn't add the event", body: error.localizedDescription)
         if case ClaudeError.missingAPIKey = error { onNeedsAPIKey?() }
+        if let error = error as? AppleCalendarError, error.isAccessProblem { onNeedsCalendarAccess?() }
         show(.needsAttention)
     }
 

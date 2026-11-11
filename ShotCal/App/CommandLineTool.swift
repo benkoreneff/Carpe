@@ -1,13 +1,16 @@
 import Foundation
 
-/// `ShotCal --extract <image> [--model <id>]`
+/// `ShotCal --extract <image> [--model <id>] [--calendars "Work,Home"]`
 ///
 /// Sends one image through the same extraction the hotkey uses and prints
-/// Claude's JSON plus the resolved dates. The API key comes from the Keychain,
+/// Claude's JSON plus the resolved dates. With `--calendars`, Claude is also
+/// asked which of those calendars the events belong in, as it is when
+/// "Ask which calendar every time" is on. The API key comes from the Keychain,
 /// or from ANTHROPIC_API_KEY when the Keychain has none.
 struct CommandLineTool {
     var imagePath: String
     var model: String
+    var calendarNames: [String] = []
 
     init?(arguments: [String]) {
         guard let flag = arguments.firstIndex(of: "--extract") else { return nil }
@@ -17,12 +20,17 @@ struct CommandLineTool {
         } else {
             model = Preferences.modelID
         }
+        if let flag = arguments.firstIndex(of: "--calendars"), arguments.indices.contains(flag + 1) {
+            calendarNames = arguments[flag + 1].split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+        }
     }
 
     /// Returns the process exit code.
     func run() async -> Int32 {
         guard !imagePath.isEmpty else {
-            return fail("usage: ShotCal --extract <image> [--model <id>]")
+            return fail("usage: ShotCal --extract <image> [--model <id>] [--calendars \"Work,Home\"]")
         }
         let key = Keychain.get(.anthropicAPIKey) ?? ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] ?? ""
         guard !key.isEmpty else {
@@ -34,7 +42,9 @@ struct CommandLineTool {
             let now = Date()
             let timeZone = TimeZone.current
             let client = ClaudeClient(apiKey: key, model: model)
-            let result = try await client.extractEvents(from: image, now: now, timeZone: timeZone)
+            let result = try await client.extractEvents(
+                from: image, now: now, timeZone: timeZone, calendarNames: calendarNames
+            )
 
             print("# \(model), image sent at \(image.pixelWidth)x\(image.pixelHeight) px"
                 + (result.usedStructuredOutputs ? "" : ", plain-JSON fallback"))
@@ -44,6 +54,9 @@ struct CommandLineTool {
             for event in result.extraction.events {
                 let resolved = try resolver.resolve(event)
                 print("# -> \(EventFormatter.line(resolved))" + (resolved.isAllDay ? " (all day)" : ""))
+            }
+            if !calendarNames.isEmpty {
+                print("# suggested calendar: \(result.extraction.suggestedCalendar ?? "none")")
             }
             return 0
         } catch {
