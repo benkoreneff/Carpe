@@ -62,7 +62,7 @@ enum ScreenCapturer {
     // MARK: - Helpers
 
     private static func temporaryFile() -> URL {
-        FileManager.default.temporaryDirectory.appendingPathComponent("ShotCal-\(UUID().uuidString).png")
+        FileManager.default.temporaryDirectory.appendingPathComponent("Carpe-\(UUID().uuidString).png")
     }
 
     /// Runs a tool and waits for it to exit.

@@ -3,7 +3,7 @@ import os
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private static let log = Logger(subsystem: "com.koreneff.ShotCal", category: "app")
+    private static let log = Logger(subsystem: "com.koreneff.carpe", category: "app")
 
     private let notifier = Notifier()
     private let windows = WindowPresenter()
@@ -107,7 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Windows
 
     private func showSettings() {
-        windows.show(id: "settings", title: "ShotCal Settings") {
+        windows.show(id: "settings", title: "Carpe Settings") {
             SettingsView(
                 google: google, apple: apple, hotKeys: hotKeys,
                 googleCalendars: { [googleCalendar] in try await googleCalendar.calendars() }
@@ -116,7 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showPermissions() {
-        windows.show(id: "permissions", title: "Welcome to ShotCal") {
+        windows.show(id: "permissions", title: "Welcome to Carpe") {
             PermissionsView(
                 notifier: notifier, apple: apple, google: google,
                 showSettings: { [weak self] in self?.showSettings() }
@@ -152,7 +152,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
 
         let main = NSMenu()
-        for submenu in [NSMenu(title: "ShotCal"), edit, window] {
+        for submenu in [NSMenu(title: "Carpe"), edit, window] {
             let item = NSMenuItem()
             item.submenu = submenu
             main.addItem(item)

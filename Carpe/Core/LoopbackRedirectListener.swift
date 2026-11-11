@@ -43,7 +43,7 @@ nonisolated final class LoopbackRedirectListener: @unchecked Sendable {
         } catch {
             throw LoopbackRedirectError.couldNotListen(error.localizedDescription)
         }
-        let queue = DispatchQueue(label: "com.koreneff.ShotCal.oauth-redirect")
+        let queue = DispatchQueue(label: "com.koreneff.carpe.oauth-redirect")
 
         // The port is only known once the listener is ready.
         let port: UInt16 = try await withCheckedThrowingContinuation { continuation in
@@ -153,18 +153,18 @@ nonisolated final class LoopbackRedirectListener: @unchecked Sendable {
 
         if parameters["code"] != nil {
             send(status: "200 OK", page: Self.page(
-                "ShotCal is signing in",
-                "You can close this tab and go back to ShotCal."
+                "Carpe is signing in",
+                "You can close this tab and go back to Carpe."
             ), on: connection)
             finish(.success(parameters))
         } else if parameters["error"] != nil {
             send(status: "200 OK", page: Self.page(
                 "Google sign-in was not completed",
-                "Nothing was connected. You can close this tab and try again from ShotCal."
+                "Nothing was connected. You can close this tab and try again from Carpe."
             ), on: connection)
             finish(.success(parameters))
         } else {
-            send(status: "400 Bad Request", page: Self.page("Not a sign-in redirect", "Start again from ShotCal."), on: connection)
+            send(status: "400 Bad Request", page: Self.page("Not a sign-in redirect", "Start again from Carpe."), on: connection)
         }
     }
 
@@ -205,7 +205,7 @@ nonisolated final class LoopbackRedirectListener: @unchecked Sendable {
     private static func page(_ heading: String, _ text: String) -> String {
         """
         <!doctype html>
-        <html lang="en"><head><meta charset="utf-8"><title>ShotCal</title>
+        <html lang="en"><head><meta charset="utf-8"><title>Carpe</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
         body { font: 16px -apple-system, system-ui, sans-serif; margin: 20vh auto 0; max-width: 28em;

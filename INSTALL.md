@@ -1,6 +1,6 @@
-# Installing ShotCal
+# Installing Carpe
 
-ShotCal sits in the menu bar. You press a shortcut, drag a box around an event
+Carpe sits in the menu bar. You press a shortcut, drag a box around an event
 on your screen (an email, a chat message, a poster), and the event is added to
 your calendar.
 
@@ -9,17 +9,17 @@ You need a Mac with macOS 14 (Sonoma) or later. To check, choose
 
 ## 1. Install
 
-1. Double-click `ShotCal-<version>.dmg`.
-2. In the window that opens, drag **ShotCal** onto **Applications**.
-3. Open **ShotCal** from your Applications folder. The first time, macOS asks
+1. Double-click `Carpe-<version>.dmg`.
+2. In the window that opens, drag **Carpe** onto **Applications**.
+3. Open **Carpe** from your Applications folder. The first time, macOS asks
    whether you want to open an app downloaded from the internet. Click
    **Open**.
 
 A small calendar icon with a plus appears in the menu bar at the top right of
-the screen, and a window called *Welcome to ShotCal* opens. ShotCal has no Dock
+the screen, and a window called *Welcome to Carpe* opens. Carpe has no Dock
 icon and no main window. Everything is behind that menu bar icon.
 
-You can now eject the ShotCal disk in Finder and delete the `.dmg` file.
+You can now eject the Carpe disk in Finder and delete the `.dmg` file.
 
 ## 2. Go through the welcome window
 
@@ -29,18 +29,18 @@ It has three steps. Each one gets a green tick when it is done.
 
 1. Choose **Apple Calendar**.
 2. Click **Allow Calendar Access**.
-3. macOS asks for permission. Click **Allow Full Access**. ShotCal needs this
+3. macOS asks for permission. Click **Allow Full Access**. Carpe needs this
    to show your calendars, add events, and remove one when you click Undo.
 
 **Screen Recording**
 
 1. Click **Open Screen Recording Settings**.
-2. In the list, switch **ShotCal** on. Your Mac may ask for your password or
+2. In the list, switch **Carpe** on. Your Mac may ask for your password or
    Touch ID.
 3. If macOS offers **Quit & Reopen**, click it. Otherwise go back to the
-   welcome window and click **Relaunch ShotCal**.
+   welcome window and click **Relaunch Carpe**.
 
-Without this, ShotCal can only see your desktop picture instead of your
+Without this, Carpe can only see your desktop picture instead of your
 windows.
 
 **Notifications**
@@ -48,14 +48,14 @@ windows.
 1. Click **Allow Notifications**.
 2. macOS shows a notification asking for permission. Click **Allow**.
 
-ShotCal tells you what it added, or what went wrong, with a notification.
+Carpe tells you what it added, or what went wrong, with a notification.
 
 If you closed the window too early, click the menu bar icon and choose
 **Permissions…** to get it back.
 
 ## 3. Paste the API key
 
-ShotCal uses Claude, an AI service from Anthropic, to read the screenshot. That
+Carpe uses Claude, an AI service from Anthropic, to read the screenshot. That
 needs an API key: a long piece of text that starts with `sk-ant-`.
 
 1. Click the menu bar icon and choose **Settings…**.
@@ -71,7 +71,7 @@ While you are in Settings:
 - **Default calendar** is where new events go.
 - **Ask which calendar every time** lets you pick the calendar for each event
   instead.
-- **Launch at login** starts ShotCal whenever you start your Mac.
+- **Launch at login** starts Carpe whenever you start your Mac.
 
 ## 4. Use it
 
@@ -88,11 +88,11 @@ icon as *Open Last Event* and *Undo Last Event*.
 ## If something doesn't work
 
 - **The screenshot only shows my desktop picture.** Screen Recording isn't on,
-  or ShotCal wasn't relaunched after you switched it on. Choose
+  or Carpe wasn't relaunched after you switched it on. Choose
   **Permissions…** from the menu and do that step again.
-- **It says ShotCal doesn't have access to my calendars.** Choose
+- **It says Carpe doesn't have access to my calendars.** Choose
   **Permissions…** from the menu and click the button under *Calendar*. In the
-  list that opens, set ShotCal to **Full Access**.
+  list that opens, set Carpe to **Full Access**.
 - **Nothing happens when I press the shortcut.** Another app may use the same
   shortcut. Open **Settings…**, click the shortcut, and press a different
   combination.
@@ -103,9 +103,9 @@ icon as *Open Last Event* and *Undo Last Event*.
   check that nothing is missing from the start or the end.
 
 When asking for help, mention the version. It is the grey line just above
-*Quit ShotCal* in the menu, for example *ShotCal 0.1.0*.
+*Quit Carpe* in the menu, for example *Carpe 0.1.0*.
 
-## Removing ShotCal
+## Removing Carpe
 
-Choose **Quit ShotCal** from the menu, then drag ShotCal from Applications to
+Choose **Quit Carpe** from the menu, then drag Carpe from Applications to
 the Trash.

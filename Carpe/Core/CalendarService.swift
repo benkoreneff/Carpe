@@ -1,6 +1,6 @@
 import Foundation
 
-/// The calendar services ShotCal can save to. The raw value is what is stored
+/// The calendar services Carpe can save to. The raw value is what is stored
 /// in UserDefaults and inside notifications.
 enum CalendarServiceKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case apple
@@ -37,7 +37,7 @@ struct CreatedEvent: Equatable, Sendable, Codable {
 }
 
 /// What one capture put in the calendar. It travels inside the notification,
-/// so Open and Undo still work after ShotCal has been relaunched.
+/// so Open and Undo still work after Carpe has been relaunched.
 struct SavedCapture: Equatable, Sendable, Codable {
     /// Where the events were saved, which is not always the service that is
     /// selected by the time Open or Undo is used.
@@ -77,7 +77,7 @@ struct SavedCapture: Equatable, Sendable, Codable {
     }
 }
 
-/// Everything ShotCal does with a calendar. `AppleCalendarService` and
+/// Everything Carpe does with a calendar. `AppleCalendarService` and
 /// `GoogleCalendarService` are the real ones; `StubCalendarService` stands in
 /// for Google until it is connected.
 protocol CalendarService {

@@ -107,7 +107,7 @@ struct SettingsView: View {
     }
 
     private var calendarFooter: String {
-        let asking = "After reading a screenshot, ShotCal shows your calendars with Claude's suggestion selected, "
+        let asking = "After reading a screenshot, Carpe shows your calendars with Claude's suggestion selected, "
             + "or else the one used last. The calendar names are sent to Claude along with the screenshot."
         switch service.wrappedValue {
         case .apple:
@@ -158,7 +158,7 @@ struct SettingsView: View {
         switch appleAccess {
         case .notDetermined: "Not allowed yet"
         case .granted: "Allowed"
-        case .addOnly: "Add Only; ShotCal needs Full Access"
+        case .addOnly: "Add Only; Carpe needs Full Access"
         case .denied: "Switched off"
         case .restricted: "Restricted on this Mac"
         }
@@ -215,10 +215,10 @@ struct SettingsView: View {
             try LoginItem.setEnabled(enabled)
             generalMessage = nil
             if enabled, LoginItem.needsApproval {
-                generalMessage = "Allow ShotCal under System Settings > General > Login Items."
+                generalMessage = "Allow Carpe under System Settings > General > Login Items."
                 LoginItem.openSystemSettings()
             } else if enabled, !LoginItem.runsFromApplications {
-                generalMessage = "This copy of ShotCal runs from the build folder, so the login item breaks when "
+                generalMessage = "This copy of Carpe runs from the build folder, so the login item breaks when "
                     + "the folder is cleaned. Run \"make install\" and switch this on in the installed copy."
             }
         } catch {

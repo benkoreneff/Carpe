@@ -29,7 +29,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         self.hotKeys = hotKeys
         self.actions = actions
 
-        let icon = Self.symbol("calendar.badge.plus", "ShotCal")
+        let icon = Self.symbol("calendar.badge.plus", "Carpe")
         self.icon = icon
         super.init()
 
@@ -62,8 +62,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         }
         spinner.stopAnimation(nil)
         switch pipeline.recentOutcome {
-        case .success: item.button?.image = Self.symbol("checkmark.circle.fill", "ShotCal: done")
-        case .needsAttention: item.button?.image = Self.symbol("exclamationmark.triangle.fill", "ShotCal: needs attention")
+        case .success: item.button?.image = Self.symbol("checkmark.circle.fill", "Carpe: done")
+        case .needsAttention: item.button?.image = Self.symbol("exclamationmark.triangle.fill", "Carpe: needs attention")
         case nil: item.button?.image = icon
         }
     }
@@ -123,14 +123,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         add("Permissions…", #selector(showPermissions), to: menu)
         menu.addItem(.separator())
         menu.addItem(info(Self.versionLine))
-        let quit = menu.addItem(withTitle: "Quit ShotCal", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quit = menu.addItem(withTitle: "Quit Carpe", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quit.target = NSApp
     }
 
-    /// "ShotCal 0.1.0", so a user can say which copy they are running.
+    /// "Carpe 0.1.0", so a user can say which copy they are running.
     private static var versionLine: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-        return "ShotCal \(version ?? "(unknown version)")"
+        return "Carpe \(version ?? "(unknown version)")"
     }
 
     @discardableResult

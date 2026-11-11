@@ -5,7 +5,7 @@ import Testing
 /// Clipboard tests use a private named pasteboard, never the real clipboard.
 @Suite struct ScreenCapturerTests {
     static func makePasteboard() -> NSPasteboard {
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ShotCalTests-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("CarpeTests-\(UUID().uuidString)"))
         pasteboard.clearContents()
         return pasteboard
     }
@@ -114,7 +114,7 @@ import Testing
 
     @Test func runWaitsForTheToolAndReportsFailure() async throws {
         let shell = URL(fileURLWithPath: "/bin/sh")
-        let marker = FileManager.default.temporaryDirectory.appendingPathComponent("ShotCalTests-\(UUID().uuidString)")
+        let marker = FileManager.default.temporaryDirectory.appendingPathComponent("CarpeTests-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: marker) }
 
         try await ScreenCapturer.run(shell, ["-c", "sleep 0.2; touch '\(marker.path)'"])

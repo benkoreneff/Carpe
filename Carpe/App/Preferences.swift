@@ -61,7 +61,7 @@ enum Preferences {
     /// Show the calendar picker after every capture instead of using the default.
     static var askForCalendar: Bool { defaults.bool(forKey: Key.askForCalendar) }
 
-    /// The calendar picked the last time ShotCal asked, per service.
+    /// The calendar picked the last time Carpe asked, per service.
     static func lastCalendarID(for service: CalendarServiceKind) -> String? {
         defaults.string(forKey: "\(Key.lastCalendarID).\(service.rawValue)")
     }
@@ -85,11 +85,11 @@ enum Preferences {
     }
 
     /// Debugging aid: leave each screenshot in the temp folder and log its
-    /// path. `defaults write com.koreneff.ShotCal keepCaptures -bool YES`
+    /// path. `defaults write com.koreneff.carpe keepCaptures -bool YES`
     static var keepCaptures: Bool { defaults.bool(forKey: Key.keepCaptures) }
 
     /// Have screencapture write the PNG itself instead of going through the
     /// clipboard. Off by default because that path can stall for a minute when
-    /// Spotlight is slow. `defaults write com.koreneff.ShotCal captureToFile -bool YES`
+    /// Spotlight is slow. `defaults write com.koreneff.carpe captureToFile -bool YES`
     static var captureToFile: Bool { defaults.bool(forKey: Key.captureToFile) }
 }

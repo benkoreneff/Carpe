@@ -1,7 +1,7 @@
 #!/bin/bash
-# Builds ShotCal for other people's Macs: a universal Release build signed with
+# Builds Carpe for other people's Macs: a universal Release build signed with
 # the Developer ID Application certificate and the hardened runtime, notarized
-# by Apple, stapled, and packed into dist/ShotCal-<version>.dmg with an
+# by Apple, stapled, and packed into dist/Carpe-<version>.dmg with an
 # Applications shortcut.
 #
 #   scripts/release.sh                       the real thing
@@ -9,17 +9,17 @@
 #                                            try the build; the image is named
 #                                            "-unnotarized" and is not for sharing
 #
-# Notarization signs in with the keychain profile "shotcal-notary". The script
+# Notarization signs in with the keychain profile "carpe-notary". The script
 # never sees the Apple ID or its password; create the profile once yourself:
 #
-#   xcrun notarytool store-credentials "shotcal-notary" \
+#   xcrun notarytool store-credentials "carpe-notary" \
 #       --apple-id "YOUR_APPLE_ID_EMAIL" --team-id "375L8HDHKR"
 #
 # and paste an app-specific password (from account.apple.com) when it asks.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PROFILE="shotcal-notary"
+PROFILE="carpe-notary"
 NOTARIZE=1
 for arg in "$@"; do
     case "$arg" in
@@ -83,13 +83,13 @@ scripts/check-secrets.sh || fail "the release stops here: see above."
 
 step "Building the Release configuration (arm64 and x86_64)"
 DERIVED="build/release"
-APP="$DERIVED/Build/Products/Release/ShotCal.app"
+APP="$DERIVED/Build/Products/Release/Carpe.app"
 rm -rf "$DERIVED"
 xcodegen generate --quiet
 # Overrides the development signing in project.yml for this build only.
 # No get-task-allow (Apple rejects debuggable apps), and a secure timestamp,
 # which notarization requires.
-xcodebuild -project ShotCal.xcodeproj -scheme ShotCal -configuration Release \
+xcodebuild -project Carpe.xcodeproj -scheme Carpe -configuration Release \
     -derivedDataPath "$DERIVED" -destination 'generic/platform=macOS' \
     ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
     CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Developer ID Application" DEVELOPMENT_TEAM="$TEAM" \
@@ -99,7 +99,7 @@ xcodebuild -project ShotCal.xcodeproj -scheme ShotCal -configuration Release \
 
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist")
 BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP/Contents/Info.plist")
-echo "Built ShotCal $VERSION ($BUILD)"
+echo "Built Carpe $VERSION ($BUILD)"
 
 step "Checking the signature"
 codesign --verify --deep --strict "$APP" || fail "the signature doesn't verify"
@@ -116,7 +116,7 @@ echo "$ENTITLEMENTS" | grep -q "com.apple.security.personal-information.calendar
 if echo "$ENTITLEMENTS" | grep -q "get-task-allow"; then
     fail "the app is signed as debuggable (get-task-allow), which Apple rejects"
 fi
-ARCHS_BUILT=$(lipo -archs "$APP/Contents/MacOS/ShotCal")
+ARCHS_BUILT=$(lipo -archs "$APP/Contents/MacOS/Carpe")
 case "$ARCHS_BUILT" in
     *arm64*x86_64*|*x86_64*arm64*) ;;
     *) fail "expected a universal binary, got: $ARCHS_BUILT" ;;
@@ -153,8 +153,8 @@ if [ "$NOTARIZE" -eq 1 ]; then
     # The app first, so that the copy inside the disk image carries its own
     # ticket and opens on a Mac that is offline.
     step "Notarizing the app"
-    ditto -c -k --keepParent "$APP" "$WORK/ShotCal.zip"
-    notarize "$WORK/ShotCal.zip"
+    ditto -c -k --keepParent "$APP" "$WORK/Carpe.zip"
+    notarize "$WORK/Carpe.zip"
     xcrun stapler staple "$APP"
     xcrun stapler validate "$APP"
 fi
@@ -164,17 +164,17 @@ fi
 step "Making the disk image"
 mkdir -p dist
 if [ "$NOTARIZE" -eq 1 ]; then
-    DMG="dist/ShotCal-$VERSION.dmg"
+    DMG="dist/Carpe-$VERSION.dmg"
 else
-    DMG="dist/ShotCal-$VERSION-unnotarized.dmg"
+    DMG="dist/Carpe-$VERSION-unnotarized.dmg"
 fi
-STAGE="$WORK/ShotCal"
+STAGE="$WORK/Carpe"
 mkdir "$STAGE"
-ditto "$APP" "$STAGE/ShotCal.app"
+ditto "$APP" "$STAGE/Carpe.app"
 # The shortcut to drag the app onto.
 ln -s /Applications "$STAGE/Applications"
 rm -f "$DMG"
-hdiutil create -volname "ShotCal" -srcfolder "$STAGE" -fs HFS+ -format UDZO -quiet "$DMG"
+hdiutil create -volname "Carpe" -srcfolder "$STAGE" -fs HFS+ -format UDZO -quiet "$DMG"
 codesign --sign "$IDENTITY_HASH" --timestamp "$DMG"
 codesign --verify --strict "$DMG" || fail "the disk image's signature doesn't verify"
 

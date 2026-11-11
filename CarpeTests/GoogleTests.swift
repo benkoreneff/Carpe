@@ -107,7 +107,7 @@ func query(of url: URL) -> [String: String] {
         let (data, response) = try await Self.session.data(from: url)
 
         #expect((response as? HTTPURLResponse)?.statusCode == 200)
-        #expect(String(decoding: data, as: UTF8.self).contains("go back to ShotCal"))
+        #expect(String(decoding: data, as: UTF8.self).contains("go back to Carpe"))
         #expect(try await answer == ["state": "s1", "code": "4/code"])
     }
 
@@ -164,7 +164,7 @@ func query(of url: URL) -> [String: String] {
         var opened: [URL] = []
         /// What the "browser" does with the sign-in page's URL.
         var browser: (URL) -> Void = { _ in }
-        private let suite = "ShotCalTests-\(UUID().uuidString)"
+        private let suite = "CarpeTests-\(UUID().uuidString)"
 
         init(_ secrets: [Secret: String] = [.googleClientID: "client-id", .googleClientSecret: "client-secret"]) {
             store = InMemorySecretStore(secrets)

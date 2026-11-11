@@ -1,4 +1,4 @@
-name: ShotCal
+name: Carpe
 
 options:
   deploymentTarget:
@@ -22,45 +22,45 @@ settings:
     DEVELOPMENT_TEAM: 375L8HDHKR
 
 targets:
-  ShotCal:
+  Carpe:
     type: application
     platform: macOS
     sources:
-      - ShotCal
+      - Carpe
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.koreneff.ShotCal
-        PRODUCT_NAME: ShotCal
+        PRODUCT_BUNDLE_IDENTIFIER: com.koreneff.carpe
+        PRODUCT_NAME: Carpe
         ENABLE_HARDENED_RUNTIME: YES
         # Apple Calendar: the entitlement lets EventKit work under the hardened
         # runtime, and macOS shows the text when it asks for calendar access.
-        CODE_SIGN_ENTITLEMENTS: ShotCal/ShotCal.entitlements
-        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "ShotCal adds the events it reads from your screenshots to the calendar you choose, and removes one again when you choose Undo."
+        CODE_SIGN_ENTITLEMENTS: Carpe/Carpe.entitlements
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "Carpe adds the events it reads from your screenshots to the calendar you choose, and removes one again when you choose Undo."
         INFOPLIST_KEY_LSUIElement: YES
-        INFOPLIST_KEY_CFBundleDisplayName: ShotCal
+        INFOPLIST_KEY_CFBundleDisplayName: Carpe
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
 
-  # Logic tests: compiles ShotCal/Core directly, so the tests never launch the
+  # Logic tests: compiles Carpe/Core directly, so the tests never launch the
   # menu bar app or touch the Keychain.
-  ShotCalTests:
+  CarpeTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - ShotCalTests
-      - ShotCal/Core
+      - CarpeTests
+      - Carpe/Core
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.koreneff.ShotCalTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.koreneff.carpeTests
 
 schemes:
-  ShotCal:
+  Carpe:
     build:
       targets:
-        ShotCal: all
-        ShotCalTests: [test]
+        Carpe: all
+        CarpeTests: [test]
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - ShotCalTests
+        - CarpeTests

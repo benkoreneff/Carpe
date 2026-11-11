@@ -2,11 +2,11 @@ import AppKit
 import CoreGraphics
 
 enum Permissions {
-    /// Whether ShotCal may capture other apps' windows. `screencapture` runs as
-    /// a child of ShotCal, so macOS checks ShotCal's grant, not Terminal's.
+    /// Whether Carpe may capture other apps' windows. `screencapture` runs as
+    /// a child of Carpe, so macOS checks Carpe's grant, not Terminal's.
     static var hasScreenRecording: Bool { CGPreflightScreenCaptureAccess() }
 
-    /// Shows the system prompt once and adds ShotCal to the Screen Recording
+    /// Shows the system prompt once and adds Carpe to the Screen Recording
     /// list in System Settings, where it can then be switched on.
     static func requestScreenRecording() {
         CGRequestScreenCaptureAccess()

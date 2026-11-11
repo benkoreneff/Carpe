@@ -1,6 +1,6 @@
 import Foundation
 
-/// The calendars offered when ShotCal asks where an event goes: what each one
+/// The calendars offered when Carpe asks where an event goes: what each one
 /// is called, and which one starts out selected.
 struct CalendarChoices: Equatable, Sendable {
     let calendars: [CalendarInfo]

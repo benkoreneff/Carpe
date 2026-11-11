@@ -1,4 +1,4 @@
-# ShotCal
+# Carpe
 
 A macOS menu bar app. Press a shortcut, drag over an event on screen, and the
 event is read by Claude and added to Apple Calendar or Google Calendar.
@@ -37,29 +37,29 @@ make run      # generate the project, build, verify the signature, launch
 make test     # unit tests
 make build    # build only
 make install  # optimised build into /Applications, then launch it
-make release  # notarized ShotCal-<version>.dmg for other Macs, see below
+make release  # notarized Carpe-<version>.dmg for other Macs, see below
 make clean    # remove build output and the generated project
 ```
 
 The Makefile calls `xcodegen` and `xcodebuild`. If `xcode-select` points at the
 Command Line Tools, it uses `/Applications/Xcode.app` for these commands and
 leaves the system setting alone. The built app is
-`build/Build/Products/Debug/ShotCal.app`.
+`build/Build/Products/Debug/Carpe.app`.
 
-`ShotCal.xcodeproj` is generated from `project.yml` and is not checked in. To
+`Carpe.xcodeproj` is generated from `project.yml` and is not checked in. To
 work in Xcode, run `make gen` and open it.
 
 ### Signing
 
 The app is signed with the `Apple Development` identity for team `375L8HDHKR`,
-and the bundle ID is fixed at `com.koreneff.ShotCal`. Both are set in
+and the bundle ID is fixed at `com.koreneff.carpe`. Both are set in
 `project.yml`. macOS ties the Screen Recording grant and the Keychain items to
 that pair, so an ad-hoc signature or a new bundle ID would make it ask again
 after every build. `make build` fails if the result is not signed this way.
 
 ## Releasing to other Macs
 
-`scripts/release.sh` (or `make release`) produces `dist/ShotCal-<version>.dmg`,
+`scripts/release.sh` (or `make release`) produces `dist/Carpe-<version>.dmg`,
 which opens on any Mac with macOS 14 or later without a warning.
 [INSTALL.md](INSTALL.md) is the guide to send along with it.
 
@@ -67,11 +67,11 @@ One-time setup:
 
 1. A **Developer ID Application** certificate in the keychain (Xcode >
    Settings > Accounts > Manage Certificates).
-2. A notarization profile named `shotcal-notary`. The script never sees the
+2. A notarization profile named `carpe-notary`. The script never sees the
    Apple ID or its password, so create the profile yourself:
 
    ```sh
-   xcrun notarytool store-credentials "shotcal-notary" \
+   xcrun notarytool store-credentials "carpe-notary" \
        --apple-id "YOUR_APPLE_ID_EMAIL" --team-id "375L8HDHKR"
    ```
 
@@ -102,7 +102,7 @@ and names the image `-unnotarized`, to try the build. Other Macs refuse to open
 that one.
 
 The version is `MARKETING_VERSION` in `project.yml`. It is in the disk image's
-name and in ShotCal's menu, on the grey line above *Quit ShotCal*.
+name and in Carpe's menu, on the grey line above *Quit Carpe*.
 
 `scripts/check-secrets.sh` also runs by itself (`make check-secrets`). It
 prints only the first characters of a match. A file that git ignores, such as a
@@ -116,15 +116,15 @@ again, and for the login password to read the saved keys.
 
 ## First run
 
-ShotCal opens a setup window with three steps:
+Carpe opens a setup window with three steps:
 
 1. **Calendar.** Choose *Apple Calendar* or *Google Calendar*. For Apple
-   Calendar, click *Allow Calendar Access* and allow full access: ShotCal lists
+   Calendar, click *Allow Calendar Access* and allow full access: Carpe lists
    your calendars, adds events, and deletes one when you choose Undo. If access
    was refused earlier, the button opens *System Settings > Privacy & Security >
    Calendars* instead. For Google Calendar, the button opens Settings.
-2. **Screen Recording.** Click *Open Screen Recording Settings*, switch ShotCal
-   on, then click *Relaunch ShotCal*. macOS applies the grant only to a fresh
+2. **Screen Recording.** Click *Open Screen Recording Settings*, switch Carpe
+   on, then click *Relaunch Carpe*. macOS applies the grant only to a fresh
    launch.
 3. **Notifications.** Click *Allow Notifications*.
 
@@ -149,7 +149,7 @@ Then open *Settings…*:
 
 ### Connecting Google Calendar
 
-The sign-in is OAuth 2.0 for desktop apps with PKCE. ShotCal opens the system
+The sign-in is OAuth 2.0 for desktop apps with PKCE. Carpe opens the system
 browser and listens on `http://127.0.0.1` on a random port for Google's
 redirect. The listener accepts connections from this Mac only and closes when
 the sign-in ends or after five minutes. Two scopes are requested:
@@ -167,7 +167,7 @@ happens if the calendar-list box is unticked on Google's consent screen.
 
 Events go to the *Default calendar*, which starts as the account's main one. To
 keep captured events apart, create a calendar in Google Calendar (for example
-"ShotCal") and pick it.
+"Carpe") and pick it.
 
 *Disconnect* removes the saved sign-in and asks Google to revoke it. If Google
 stops accepting the sign-in, the menu shows *Reconnect Google…*.
@@ -199,7 +199,7 @@ Claude gets the names of your calendars along with the screenshot and returns
 `suggested_calendar`, which is one of those names or nothing. Without a
 suggestion, the calendar chosen last time is selected, and failing that the
 default. Two calendars with the same title are shown with their account, as in
-"Home (iCloud)". The panel doesn't bring ShotCal to the front, so the app you
+"Home (iCloud)". The panel doesn't bring Carpe to the front, so the app you
 were in stays active behind it.
 
 The calendar names are only sent to Claude while this setting is on.
@@ -207,7 +207,7 @@ The calendar names are only sent to Claude while this setting is on.
 ### Open and Undo
 
 The "Added" notification has two buttons. macOS shows them when you hover over
-the banner and click *Options*, or directly if ShotCal's notification style is
+the banner and click *Options*, or directly if Carpe's notification style is
 set to *Alerts* in System Settings.
 
 - **Open** shows the event in the Calendar app, which moves to its date, or the
@@ -216,7 +216,7 @@ set to *Alerts* in System Settings.
 - **Undo** deletes the event, or all events from that capture, and confirms with
   a "Removed" notification.
 
-Both work from Notification Center later on, also after ShotCal has been
+Both work from Notification Center later on, also after Carpe has been
 restarted, and they act on the service the event was saved to even if another
 one is selected by then. The menu has *Open Last Event* and *Undo Last Event* for the most
 recent capture.
@@ -225,10 +225,10 @@ recent capture.
 
 In *Settings…* under *General*, click the shortcut, then press the new
 combination. It needs at least one of ⌃, ⌥ and ⌘. If another app already holds
-the combination, ShotCal says so and keeps the old one. *Reset* returns to
+the combination, Carpe says so and keeps the old one. *Reset* returns to
 Ctrl+Opt+Cmd+C.
 
-*Launch at login* registers the running copy of ShotCal as a login item. Run
+*Launch at login* registers the running copy of Carpe as a login item. Run
 `make install` first and switch it on in the copy in `/Applications`; the copy
 in `build/` is deleted by `make clean`. The installed copy has the same bundle
 ID and signature, so it keeps the Screen Recording permission and the Keychain
@@ -236,7 +236,7 @@ items.
 
 ### How the capture is taken
 
-ShotCal runs `/usr/sbin/screencapture -i -x -c`, which puts the selection on the
+Carpe runs `/usr/sbin/screencapture -i -x -c`, which puts the selection on the
 clipboard. It then moves the image into a temp file, puts back whatever was on
 the clipboard before, and deletes the temp file when the run ends. A clipboard
 manager may still record the screenshot for a moment.
@@ -249,7 +249,7 @@ you would rather not have the clipboard touched, switch to writing the file
 directly:
 
 ```sh
-defaults write com.koreneff.ShotCal captureToFile -bool YES
+defaults write com.koreneff.carpe captureToFile -bool YES
 ```
 
 ## Testing each stage
@@ -259,12 +259,12 @@ notification "Screenshot captured, but there's no API key" and the size of the
 image, which confirms the hotkey and the capture. To inspect the file itself:
 
 ```sh
-defaults write com.koreneff.ShotCal keepCaptures -bool YES   # keep the temp files
-log stream --info --predicate 'subsystem == "com.koreneff.ShotCal"'
+defaults write com.koreneff.carpe keepCaptures -bool YES   # keep the temp files
+log stream --info --predicate 'subsystem == "com.koreneff.carpe"'
 ```
 
 The log prints the path of each kept file. Turn it off again with
-`defaults delete com.koreneff.ShotCal keepCaptures`.
+`defaults delete com.koreneff.carpe keepCaptures`.
 
 **Stage 2, extraction.** After a capture, *Copy Last Result as JSON* in the menu
 copies what Claude returned, and the `log stream` command above prints it. To
@@ -284,17 +284,17 @@ make extract IMG=~/Desktop/some-screenshot.png CALENDARS="Work,Home,Kids footbal
 
 **Stage 3, Google Calendar.** Once *Settings* shows *Connected*, a capture ends
 with the notification "Added: …" and the event is in the calendar. To check the unhappy paths: a wrong Calendar ID gives a
-notification naming the ID, and removing ShotCal's access at
+notification naming the ID, and removing Carpe's access at
 <https://myaccount.google.com/connections> makes the menu offer
 *Reconnect Google…* at the next capture, within an hour.
 
 **Stage 3, Apple Calendar.** Select *Apple Calendar* in Settings and allow
 access. A capture ends with "Added: …" and the event is in the calendar picked
-in Settings. To check the unhappy path, switch ShotCal off under *System
+in Settings. To check the unhappy path, switch Carpe off under *System
 Settings > Privacy & Security > Calendars* and capture again: the notification says access is missing, the setup window
 opens, and the menu shows *Allow Calendar Access…*. To see the first-run
-question again, run `tccutil reset Calendar com.koreneff.ShotCal` and
-`defaults delete com.koreneff.ShotCal calendarService`.
+question again, run `tccutil reset Calendar com.koreneff.carpe` and
+`defaults delete com.koreneff.carpe calendarService`.
 
 **Stage 3, the calendar picker.** Switch on *Ask which calendar every time* and
 capture. Check that the suggested calendar is selected, pick another with a
@@ -319,7 +319,7 @@ that the icon is in the menu bar.
 - The system prompt states today's date, weekday, local time and time zone,
   and lists the next 14 days with their weekdays, so "ensi tiistaina" and
   "huomenna klo 14" resolve correctly.
-- If a model rejects the structured request, ShotCal asks for plain JSON
+- If a model rejects the structured request, Carpe asks for plain JSON
   instead, validates it, and retries once if it does not parse.
 - With *Ask which calendar every time* on, the prompt also lists the calendar
   names, and the schema gets `suggested_calendar`: an enum of exactly those
@@ -338,12 +338,12 @@ screenshot showed no year. `EventDateResolver` uses it to move a date that
 landed in the past to its next occurrence, so that rule holds even if the model
 gets the year wrong. The same file applies the one-hour default and converts
 all-day ranges to the exclusive end date calendars expect. Its tests are in
-`ShotCalTests/EventDateResolverTests.swift`.
+`CarpeTests/EventDateResolverTests.swift`.
 
 ## Secrets
 
 Four items are stored in the login Keychain under the service
-`com.koreneff.ShotCal`: the Anthropic API key, the Google client ID, the Google
+`com.koreneff.carpe`: the Anthropic API key, the Google client ID, the Google
 client secret, and the Google refresh token. The Google access token is kept in
 memory only and fetched again after a relaunch. Apple Calendar needs no secret:
 access is a macOS permission. The model ID, calendar service, calendar IDs,
@@ -360,38 +360,38 @@ scripts/release.sh     Signed, notarized disk image for other Macs
 scripts/check-secrets.sh
                        Looks for credentials in files, history and a bundle
 INSTALL.md             Installation guide for the person receiving the app
-ShotCal/ShotCal.entitlements
+Carpe/Carpe.entitlements
                        Calendar access under the hardened runtime
-ShotCal/Core/          Logic with no UI: Claude client, prompt and schema,
+Carpe/Core/            Logic with no UI: Claude client, prompt and schema,
                        date resolution, image scaling, region capture, the
                        CalendarService protocol with its Apple (EventKit) and
                        Google (sign-in and Calendar API) implementations
-ShotCal/App/           Menu bar item, hotkey and recorder, pipeline, calendar
+Carpe/App/             Menu bar item, hotkey and recorder, pipeline, calendar
                        picker panel, notifications, login item, settings and
                        permissions windows, --extract command
-ShotCalTests/          Unit tests; compiles ShotCal/Core directly
+CarpeTests/            Unit tests; compiles Carpe/Core directly
 ```
 
 ## Google Cloud setup
 
 You end up with a client ID and a client secret for a desktop OAuth client,
-which go into ShotCal's Settings. Google renames these console pages from time to time;
+which go into Carpe's Settings. Google renames these console pages from time to time;
 the names below are from its current guides.
 
 1. Go to <https://console.cloud.google.com>, and create a project (for example
-   "ShotCal").
+   "Carpe").
 2. Enable the calendar API: *APIs & Services > Library*, search for
    **Google Calendar API**, click **Enable**.
 3. Configure the consent screen: *Menu > Google Auth platform > Branding*, click
    **Get Started**.
-   - App name and support email: anything, for example "ShotCal" and your address.
+   - App name and support email: anything, for example "Carpe" and your address.
    - Audience: **External**. (Internal exists only for Google Workspace
      organisations.)
    - Contact email, agree to the data policy, **Create**.
 4. Add the scopes: *Data Access > Add or Remove Scopes*, add
    `https://www.googleapis.com/auth/calendar.events` and
    `https://www.googleapis.com/auth/calendar.calendarlist.readonly`, **Save**.
-   These are the two scopes ShotCal requests. If a scope isn't in the table,
+   These are the two scopes Carpe requests. If a scope isn't in the table,
    paste it under *Manually add scopes*.
 5. Add yourself as a tester: *Audience > Test users > Add users*, enter the
    Google account whose calendar you want to use.
@@ -400,36 +400,36 @@ the names below are from its current guides.
    and the client secret straight away, or download the JSON.
 
 One thing to decide in step 5: while the app's publishing status is *Testing*,
-Google expires refresh tokens after 7 days, so ShotCal would ask you to
+Google expires refresh tokens after 7 days, so Carpe would ask you to
 reconnect every week. Publishing the app (*Audience > Publish app*) removes that
 limit. For a personal app you do not need to go through verification; Google
 shows an "unverified app" warning once when you connect, which you can click
 through.
 
 Desktop clients may redirect to `http://127.0.0.1` on any port without
-registering a redirect URI, which is what ShotCal's sign-in uses.
+registering a redirect URI, which is what Carpe's sign-in uses.
 
 ## Troubleshooting
 
 - **The screenshot only shows the desktop picture.** Screen Recording is not
-  granted, or ShotCal was not relaunched after granting it.
+  granted, or Carpe was not relaunched after granting it.
 - **Nothing happens for about a minute after selecting.** Only in
   `captureToFile` mode, when Spotlight is slow. Delete that setting
-  (`defaults delete com.koreneff.ShotCal captureToFile`) or fix Spotlight.
+  (`defaults delete com.koreneff.carpe captureToFile`) or fix Spotlight.
 - **The shortcut does nothing.** Another app owns the combination. The menu
   says so when registration failed. Record a different one in Settings.
 - **No Open or Undo buttons.** Hover over the banner and click *Options*, or use
   *Open Last Event* and *Undo Last Event* in the menu.
 - **Launch at login stopped working.** The login item points at a copy of the
   app that has moved or been deleted. Switch it off and on in the copy you use.
-- **No notification appears.** A Focus mode silences ShotCal unless you add it
+- **No notification appears.** A Focus mode silences Carpe unless you add it
   under *System Settings > Focus > (your Focus) > Allowed Apps*. Silenced
   notifications still land in Notification Center. Also check
-  *System Settings > Notifications > ShotCal*.
-- **"ShotCal doesn't have access to your calendars".** Apple Calendar is
+  *System Settings > Notifications > Carpe*.
+- **"Carpe doesn't have access to your calendars".** Apple Calendar is
   selected and the permission is off. Use the button in the setup window
   (*Permissions…*) or in Settings; it opens *System Settings > Privacy &
-  Security > Calendars*. If ShotCal is listed there as *Add Only*, change it to
+  Security > Calendars*. If Carpe is listed there as *Add Only*, change it to
   *Full Access*.
 - **A calendar is missing from the Apple Calendar list.** Only calendars that
   can be changed are listed. Subscribed, birthday and read-only shared
@@ -440,8 +440,8 @@ registering a redirect URI, which is what ShotCal's sign-in uses.
   pasted wrong, or the client is not of the type *Desktop app*.
 - **"Google Calendar API has not been used in project…".** The API is not
   enabled in the Cloud project (step 2).
-- **"This Google sign-in doesn't let ShotCal see your list of calendars".** The
-  sign-in is from before ShotCal asked for the calendar list, or that box was
+- **"This Google sign-in doesn't let Carpe see your list of calendars".** The
+  sign-in is from before Carpe asked for the calendar list, or that box was
   unticked on Google's consent screen. In Settings, click *Disconnect* and then
   *Connect Google*, and leave both boxes ticked.
 - **The calendar panel doesn't react to the keyboard.** Another window took the
@@ -451,4 +451,4 @@ registering a redirect URI, which is what ShotCal's sign-in uses.
 - **The menu shows *Reconnect Google…*.** Google stopped accepting the saved
   sign-in: access was removed, or the app is in *Testing* and seven days passed.
 - **Checking what happened.** Key steps are logged:
-  `log show --last 10m --predicate 'subsystem == "com.koreneff.ShotCal"'`
+  `log show --last 10m --predicate 'subsystem == "com.koreneff.carpe"'`

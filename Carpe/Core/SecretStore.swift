@@ -1,6 +1,6 @@
 import Foundation
 
-/// Everything ShotCal keeps secret. The raw value is the Keychain account name.
+/// Everything Carpe keeps secret. The raw value is the Keychain account name.
 enum Secret: String, CaseIterable, Sendable {
     case anthropicAPIKey = "anthropic-api-key"
     case googleClientID = "google-client-id"

@@ -4,7 +4,7 @@ import os
 /// The whole flow behind the shortcut: pick a region, send it to Claude,
 /// resolve the dates, hand the events to the calendar, notify.
 final class Pipeline {
-    private static let log = Logger(subsystem: "com.koreneff.ShotCal", category: "pipeline")
+    private static let log = Logger(subsystem: "com.koreneff.carpe", category: "pipeline")
 
     /// Asked at the start of every run, so a change in Settings takes effect
     /// at once. Undo asks for the service the capture was saved with.

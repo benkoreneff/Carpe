@@ -9,9 +9,9 @@ endif
 
 CONFIG  ?= Debug
 DERIVED := build
-APP     := $(DERIVED)/Build/Products/$(CONFIG)/ShotCal.app
-BIN     := $(APP)/Contents/MacOS/ShotCal
-XCB     := xcodebuild -project ShotCal.xcodeproj -scheme ShotCal -configuration $(CONFIG) \
+APP     := $(DERIVED)/Build/Products/$(CONFIG)/Carpe.app
+BIN     := $(APP)/Contents/MacOS/Carpe
+XCB     := xcodebuild -project Carpe.xcodeproj -scheme Carpe -configuration $(CONFIG) \
            -derivedDataPath $(DERIVED) -destination 'platform=macOS,arch=$(shell uname -m)'
 
 .PHONY: gen build test run stop verify-signing extract install clean check-secrets release
@@ -36,7 +36,7 @@ verify-signing:
 	@codesign -dvv "$(APP)" 2>&1 | grep -E "^(Identifier|Authority=Apple Development|TeamIdentifier)"
 
 stop:
-	@pkill -x ShotCal || true
+	@pkill -x Carpe || true
 
 run: build stop
 	open "$(APP)"
@@ -48,21 +48,21 @@ extract: build
 
 # Puts an optimised build in /Applications and starts it. Use this copy for
 # launch at login: the one in build/ disappears with `make clean`.
-INSTALLED := /Applications/ShotCal.app
+INSTALLED := /Applications/Carpe.app
 install:
 	@$(MAKE) --no-print-directory build CONFIG=Release
-	@pkill -x ShotCal || true
+	@pkill -x Carpe || true
 	rm -rf "$(INSTALLED)"
-	ditto "$(DERIVED)/Build/Products/Release/ShotCal.app" "$(INSTALLED)"
+	ditto "$(DERIVED)/Build/Products/Release/Carpe.app" "$(INSTALLED)"
 	open "$(INSTALLED)"
 
 # Looks for API keys, client secrets and tokens in the files and the git history.
 check-secrets:
 	@scripts/check-secrets.sh
 
-# A notarized ShotCal-<version>.dmg in dist/, for other people's Macs.
+# A notarized Carpe-<version>.dmg in dist/, for other people's Macs.
 release:
 	@scripts/release.sh
 
 clean:
-	rm -rf $(DERIVED) dist ShotCal.xcodeproj
+	rm -rf $(DERIVED) dist Carpe.xcodeproj

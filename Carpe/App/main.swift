@@ -1,6 +1,6 @@
 import AppKit
 
-// `ShotCal --extract image.png` runs the extraction once in the terminal and
+// `Carpe --extract image.png` runs the extraction once in the terminal and
 // exits, without starting the menu bar app.
 if let command = CommandLineTool(arguments: CommandLine.arguments) {
     Task {

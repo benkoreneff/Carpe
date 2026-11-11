@@ -21,7 +21,7 @@ enum GoogleAuthError: LocalizedError, Equatable {
         case .notConnected:
             "Google Calendar isn't connected. Connect it in Settings."
         case .reconnectRequired:
-            "Google no longer accepts the saved sign-in. Choose Reconnect Google from the ShotCal menu."
+            "Google no longer accepts the saved sign-in. Choose Reconnect Google from the Carpe menu."
         case .alreadyConnecting:
             "A Google sign-in is already waiting in the browser."
         case .denied("access_denied"):
@@ -33,7 +33,7 @@ enum GoogleAuthError: LocalizedError, Equatable {
         case .noRefreshToken:
             "Google didn't return a refresh token. Try connecting again."
         case .scopeNotGranted:
-            "Calendar access wasn't granted. Connect again and allow ShotCal to manage events."
+            "Calendar access wasn't granted. Connect again and allow Carpe to manage events."
         case .badCredentials:
             "Google rejected the client ID or client secret. Check them in Settings."
         case .api(let status, let code, let message):
@@ -77,7 +77,7 @@ final class GoogleAccount {
     @ObservationIgnored private var refreshing: Task<String, Error>?
     @ObservationIgnored private var connecting: Task<Void, Error>?
 
-    private static let log = Logger(subsystem: "com.koreneff.ShotCal", category: "google")
+    private static let log = Logger(subsystem: "com.koreneff.carpe", category: "google")
     static let needsReconnectKey = "googleNeedsReconnect"
 
     init(

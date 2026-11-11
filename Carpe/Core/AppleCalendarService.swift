@@ -2,7 +2,7 @@ import CoreGraphics
 import EventKit
 import Foundation
 
-/// What macOS currently lets ShotCal do with the user's calendars.
+/// What macOS currently lets Carpe do with the user's calendars.
 enum AppleCalendarAccess: Equatable, Sendable {
     /// The system prompt hasn't been shown yet.
     case notDetermined
@@ -36,12 +36,12 @@ enum AppleCalendarError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .accessDenied:
-            "ShotCal doesn't have access to your calendars. Allow it in System Settings > Privacy & Security > Calendars."
+            "Carpe doesn't have access to your calendars. Allow it in System Settings > Privacy & Security > Calendars."
         case .addOnlyAccess:
-            "ShotCal can only add events, which isn't enough to list calendars or undo. "
+            "Carpe can only add events, which isn't enough to list calendars or undo. "
                 + "Give it Full Access in System Settings > Privacy & Security > Calendars."
         case .accessRestricted:
-            "Calendar access is restricted on this Mac, so ShotCal can't use Apple Calendar."
+            "Calendar access is restricted on this Mac, so Carpe can't use Apple Calendar."
         case .calendarNotFound:
             "The calendar chosen in Settings no longer exists. Choose another one in Settings."
         case .calendarReadOnly(let title):

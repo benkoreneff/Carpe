@@ -1,7 +1,7 @@
 import SwiftUI
 import UserNotifications
 
-/// First-run walkthrough: where events are saved, and the permissions ShotCal
+/// First-run walkthrough: where events are saved, and the permissions Carpe
 /// needs. Also under Permissions… in the menu.
 struct PermissionsView: View {
     let notifier: Notifier
@@ -20,7 +20,7 @@ struct PermissionsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Set up ShotCal")
+            Text("Set up Carpe")
                 .font(.title2.weight(.semibold))
 
             step(
@@ -51,14 +51,14 @@ struct PermissionsView: View {
                     EmptyView()
                 } else {
                     Button("Open Screen Recording Settings") {
-                        // The request adds ShotCal to the list; the pane is where it gets switched on.
+                        // The request adds Carpe to the list; the pane is where it gets switched on.
                         Permissions.requestScreenRecording()
                         Permissions.openScreenRecordingSettings()
                         askedForScreenRecording = true
                     }
                     if askedForScreenRecording {
-                        note("Switch ShotCal on in the list, then relaunch. macOS applies the change only to a fresh launch.")
-                        Button("Relaunch ShotCal") { Permissions.relaunch() }
+                        note("Switch Carpe on in the list, then relaunch. macOS applies the change only to a fresh launch.")
+                        Button("Relaunch Carpe") { Permissions.relaunch() }
                     }
                 }
             }
@@ -79,7 +79,7 @@ struct PermissionsView: View {
                         }
                     }
                 default:
-                    note("Notifications are switched off for ShotCal.")
+                    note("Notifications are switched off for Carpe.")
                     Button("Open Notification Settings") { Permissions.openNotificationSettings() }
                 }
             }
@@ -114,15 +114,15 @@ struct PermissionsView: View {
         case .granted:
             EmptyView()
         case .notDetermined:
-            note("ShotCal needs full access: it lists your calendars, adds events, and removes one when you choose Undo.")
+            note("Carpe needs full access: it lists your calendars, adds events, and removes one when you choose Undo.")
             Button("Allow Calendar Access") {
                 Task { calendarAccess = await apple.requestAccess() }
             }
         case .denied:
-            note("Calendar access is switched off for ShotCal.")
+            note("Calendar access is switched off for Carpe.")
             Button("Open Calendar Settings") { Permissions.openCalendarSettings() }
         case .addOnly:
-            note("ShotCal is set to Add Only. Change it to Full Access so it can list your calendars and undo.")
+            note("Carpe is set to Add Only. Change it to Full Access so it can list your calendars and undo.")
             Button("Open Calendar Settings") { Permissions.openCalendarSettings() }
         case .restricted:
             note("Calendar access is restricted on this Mac, so Apple Calendar can't be used here.")

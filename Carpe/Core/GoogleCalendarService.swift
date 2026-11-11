@@ -13,7 +13,7 @@ enum GoogleCalendarError: LocalizedError, Equatable {
         case .calendarNotFound(let id):
             "Google has no calendar with the ID \"\(id)\" for this account. Check the calendar ID in Settings."
         case .calendarListNotAllowed:
-            "This Google sign-in doesn't let ShotCal see your list of calendars. "
+            "This Google sign-in doesn't let Carpe see your list of calendars. "
                 + "In Settings, click Disconnect and then Connect Google, and leave every box ticked."
         case .api(403, let message):
             "Google Calendar refused the request: \(message)"

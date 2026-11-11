@@ -1,6 +1,6 @@
 import Foundation
 
-/// `ShotCal --extract <image> [--model <id>] [--calendars "Work,Home"]`
+/// `Carpe --extract <image> [--model <id>] [--calendars "Work,Home"]`
 ///
 /// Sends one image through the same extraction the hotkey uses and prints
 /// Claude's JSON plus the resolved dates. With `--calendars`, Claude is also
@@ -30,11 +30,11 @@ struct CommandLineTool {
     /// Returns the process exit code.
     func run() async -> Int32 {
         guard !imagePath.isEmpty else {
-            return fail("usage: ShotCal --extract <image> [--model <id>] [--calendars \"Work,Home\"]")
+            return fail("usage: Carpe --extract <image> [--model <id>] [--calendars \"Work,Home\"]")
         }
         let key = Keychain.get(.anthropicAPIKey) ?? ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] ?? ""
         guard !key.isEmpty else {
-            return fail("No API key: save one in ShotCal's Settings or set ANTHROPIC_API_KEY.")
+            return fail("No API key: save one in Carpe's Settings or set ANTHROPIC_API_KEY.")
         }
 
         do {

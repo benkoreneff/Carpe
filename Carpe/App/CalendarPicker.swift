@@ -15,7 +15,7 @@ struct CalendarPickerRequest {
 /// The small floating panel that asks which calendar the events go to.
 ///
 /// Up, Down and 1–9 move the selection, a click does too, Return adds, Esc
-/// cancels. The panel takes the keyboard without activating ShotCal, so the
+/// cancels. The panel takes the keyboard without activating Carpe, so the
 /// app the user was in stays in front.
 final class CalendarPicker {
     private var queue: Task<CalendarInfo?, Never>?

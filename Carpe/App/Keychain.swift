@@ -14,7 +14,7 @@ enum Keychain {
         }
     }
 
-    private static let service = "com.koreneff.ShotCal"
+    private static let service = "com.koreneff.carpe"
 
     static func get(_ item: Item) -> String? {
         var query = baseQuery(item)
@@ -42,7 +42,7 @@ enum Keychain {
         if status == errSecItemNotFound {
             var attributes = query
             attributes[kSecValueData] = data
-            attributes[kSecAttrLabel] = "ShotCal (\(item.rawValue))"
+            attributes[kSecAttrLabel] = "Carpe (\(item.rawValue))"
             status = SecItemAdd(attributes as CFDictionary, nil)
         }
         guard status == errSecSuccess else { throw Failure(status: status) }
