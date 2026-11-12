@@ -38,8 +38,12 @@ make test     # unit tests
 make build    # build only
 make install  # optimised build into /Applications, then launch it
 make release  # notarized Carpe-<version>.dmg for other Macs, see below
-make clean    # remove build output and the generated project
+make check-secrets  # look for credentials in the files and the git history
+make clean    # remove build output, the generated project, and dist.noindex/
 ```
+
+`make clean` deletes the release images in `dist.noindex/` too. Copy a disk
+image you still need somewhere else first.
 
 The Makefile calls `xcodegen` and `xcodebuild`. If `xcode-select` points at the
 Command Line Tools, it uses `/Applications/Xcode.app` for these commands and
@@ -72,9 +76,10 @@ other asked for the login password for each saved key.
 ## Releasing to other Macs
 
 `scripts/release.sh` (or `make release`) produces
-`dist.noindex/Carpe-<version>.dmg`,
-which opens on any Mac with macOS 14 or later without a warning.
-[INSTALL.md](INSTALL.md) is the guide to send along with it.
+`dist.noindex/Carpe-<version>.dmg`, which Gatekeeper accepts on any Mac with
+macOS 14 or later. The first launch still shows the usual question about an app
+downloaded from the internet. [INSTALL.md](INSTALL.md) is the guide to send
+along with it.
 
 One-time setup:
 
@@ -401,9 +406,12 @@ project.yml            XcodeGen project definition, signing settings,
 scripts/release.sh     Signed, notarized disk image for other Macs
 scripts/check-secrets.sh
                        Looks for credentials in files, history and a bundle
+scripts/make-icons.py  Draws the app icon and the menu bar glyph (needs Pillow)
+design/carpe-icon.svg  Vector master of the app icon
 INSTALL.md             Installation guide for the person receiving the app
 Carpe/Carpe.entitlements
                        Calendar access under the hardened runtime
+Carpe/Assets.xcassets/ App icon (AppIcon) and menu bar glyph (MenuBarIcon)
 Carpe/Core/            Logic with no UI: Claude client, prompt and schema,
                        date resolution, image scaling, region capture, the
                        CalendarService protocol with its Apple (EventKit) and
@@ -428,6 +436,10 @@ the names below are from its current guides.
 3. Configure the consent screen: *Menu > Google Auth platform > Branding*, click
    **Get Started**.
    - App name and support email: anything, for example "Carpe" and your address.
+   - If you fill in the home page and privacy policy links, Carpe's are
+     <https://benkoreneff.github.io/carpe-site/> and
+     <https://benkoreneff.github.io/carpe-site/privacy.html> (repository
+     `benkoreneff/carpe-site`).
    - Audience: **External**. (Internal exists only for Google Workspace
      organisations.)
    - Contact email, agree to the data policy, **Create**.
