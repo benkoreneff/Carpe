@@ -10,7 +10,12 @@ if let command = CommandLineTool(arguments: CommandLine.arguments) {
 }
 
 let app = NSApplication.shared
+app.setActivationPolicy(.accessory)
+
+// Before the delegate exists, so a copy that is about to quit or move never
+// registers the shortcut or shows a menu bar icon.
+LaunchGuard.run()
+
 let delegate = AppDelegate()
 app.delegate = delegate
-app.setActivationPolicy(.accessory)
 app.run()

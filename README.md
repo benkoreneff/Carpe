@@ -44,7 +44,12 @@ make clean    # remove build output and the generated project
 The Makefile calls `xcodegen` and `xcodebuild`. If `xcode-select` points at the
 Command Line Tools, it uses `/Applications/Xcode.app` for these commands and
 leaves the system setting alone. The built app is
-`build/Build/Products/Debug/Carpe.app`.
+`build.noindex/Build/Products/Debug/Carpe.app`.
+
+Build output goes to `build.noindex/` and release images to `dist.noindex/`.
+Spotlight skips folders whose names end in `.noindex`, so the copies of
+`Carpe.app` in there don't appear in Spotlight or Launchpad searches next to the
+one in `/Applications`.
 
 `Carpe.xcodeproj` is generated from `project.yml` and is not checked in. To
 work in Xcode, run `make gen` and open it.
@@ -59,7 +64,8 @@ after every build. `make build` fails if the result is not signed this way.
 
 ## Releasing to other Macs
 
-`scripts/release.sh` (or `make release`) produces `dist/Carpe-<version>.dmg`,
+`scripts/release.sh` (or `make release`) produces
+`dist.noindex/Carpe-<version>.dmg`,
 which opens on any Mac with macOS 14 or later without a warning.
 [INSTALL.md](INSTALL.md) is the guide to send along with it.
 
@@ -102,6 +108,9 @@ What the script does, stopping at the first step that fails:
 `scripts/release.sh --skip-notarization` does everything except Apple's part
 and names the image `-unnotarized`, to try the build. Other Macs refuse to open
 that one.
+
+Opening the release build straight from `build.noindex/` makes it ask to move
+itself to Applications, like any release copy outside that folder.
 
 The version is `MARKETING_VERSION` in `project.yml`. It is in the disk image's
 name and in Carpe's menu, on the grey line above *Quit Carpe*.
@@ -184,6 +193,30 @@ a checkmark or a warning triangle for a few seconds afterwards, and the menu
 keeps the last result, so the outcome is visible even when a Focus mode holds
 the notification back.
 
+### One copy, in Applications
+
+Only one copy of Carpe runs at a time. A second one, started while the first is
+running, activates the first and quits straight away, before it registers the
+shortcut or adds a menu bar icon.
+
+A release build that is opened from anywhere other than `/Applications` (the
+disk image, Downloads, the build folder) asks *Move Carpe to Applications?*
+
+- **Move** quits any Carpe that is running, copies this one to `/Applications`
+  (replacing a copy that is there; the question names its version), moves the
+  copy you opened to the Trash, and reopens Carpe from Applications.
+- **Not now** changes nothing. The question comes back at the next launch.
+
+The opened copy is not moved to the Trash when it is in a read-only disk image,
+or when macOS is running a downloaded app from a randomised path (Gatekeeper's
+app translocation), because the real copy can't be located from there. If
+copying fails, for example without permission to change `/Applications`, Carpe
+says so and carries on from where it is.
+
+The question is asked before the one-copy check, so a newer version opened from
+its disk image can replace an older one that is running. Development (Debug)
+builds never ask.
+
 ### Choosing the calendar
 
 With *Ask which calendar every time* off, every capture goes to the default
@@ -233,7 +266,7 @@ Ctrl+Opt+Cmd+C.
 
 *Launch at login* registers the running copy of Carpe as a login item. Run
 `make install` first and switch it on in the copy in `/Applications`; the copy
-in `build/` is deleted by `make clean`. The installed copy has the same bundle
+in `build.noindex/` is deleted by `make clean`. The installed copy has the same bundle
 ID and signature, so it keeps the Screen Recording permission and the Keychain
 items.
 
@@ -369,7 +402,8 @@ Carpe/Core/            Logic with no UI: Claude client, prompt and schema,
                        date resolution, image scaling, region capture, the
                        CalendarService protocol with its Apple (EventKit) and
                        Google (sign-in and Calendar API) implementations
-Carpe/App/             Menu bar item, hotkey and recorder, pipeline, calendar
+Carpe/App/             Launch checks (one copy, move to Applications), menu
+                       bar item, hotkey and recorder, pipeline, calendar
                        picker panel, notifications, login item, settings and
                        permissions windows, --extract command
 CarpeTests/            Unit tests; compiles Carpe/Core directly

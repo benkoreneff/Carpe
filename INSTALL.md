@@ -15,6 +15,10 @@ You need a Mac with macOS 14 (Sonoma) or later. To check, choose
    whether you want to open an app downloaded from the internet. Click
    **Open**.
 
+If you opened Carpe straight from the disk image window without dragging it
+first, it asks **Move Carpe to Applications?** Click **Move** and it does the
+same thing for you.
+
 A small calendar icon with a plus appears in the menu bar at the top right of
 the screen, and a window called *Welcome to Carpe* opens. Carpe has no Dock
 icon and no main window. Everything is behind that menu bar icon.
@@ -100,7 +104,7 @@ icon as *Open Last Event* and *Undo Last Event*.
   check that nothing is missing from the start or the end.
 
 When asking for help, mention the version. It is the grey line just above
-*Quit Carpe* in the menu, for example *Carpe 0.1.0*.
+*Quit Carpe* in the menu, for example *Carpe 0.1.1*.
 
 ## Removing Carpe
 

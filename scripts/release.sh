@@ -1,7 +1,7 @@
 #!/bin/bash
 # Builds Carpe for other people's Macs: a universal Release build signed with
 # the Developer ID Application certificate and the hardened runtime, notarized
-# by Apple, stapled, and packed into dist/Carpe-<version>.dmg with an
+# by Apple, stapled, and packed into dist.noindex/Carpe-<version>.dmg with an
 # Applications shortcut.
 #
 #   scripts/release.sh                       the real thing
@@ -82,7 +82,10 @@ scripts/check-secrets.sh || fail "the release stops here: see above."
 # -------------------------------------------------------------------- build
 
 step "Building the Release configuration (arm64 and x86_64)"
-DERIVED="build/release"
+# Folders named *.noindex are skipped by Spotlight, which would otherwise list
+# every Carpe.app in the build output.
+DERIVED="build.noindex/release"
+DIST="dist.noindex"
 APP="$DERIVED/Build/Products/Release/Carpe.app"
 rm -rf "$DERIVED"
 xcodegen generate --quiet
@@ -131,7 +134,7 @@ step "Looking for this Mac's paths in the app bundle"
 # Every byte of every file: the paths sit outside the sections `strings` reads
 # by default.
 if LC_ALL=C grep -raqE -e "/Users/|$(id -un)" -- "$APP"; then
-    LC_ALL=C grep -raclE -e "/Users/|$(id -un)" -- "$APP" | sed 's/^/    /'
+    LC_ALL=C grep -ralE -e "/Users/|$(id -un)" -- "$APP" | sed 's/^/    /'
     fail "the app contains a path from this Mac or the user name $(id -un)"
 fi
 echo "No /Users/ path and no user name in the bundle"
@@ -174,11 +177,11 @@ fi
 # ------------------------------------------------------------------ package
 
 step "Making the disk image"
-mkdir -p dist
+mkdir -p "$DIST"
 if [ "$NOTARIZE" -eq 1 ]; then
-    DMG="dist/Carpe-$VERSION.dmg"
+    DMG="$DIST/Carpe-$VERSION.dmg"
 else
-    DMG="dist/Carpe-$VERSION-unnotarized.dmg"
+    DMG="$DIST/Carpe-$VERSION-unnotarized.dmg"
 fi
 STAGE="$WORK/Carpe"
 mkdir "$STAGE"

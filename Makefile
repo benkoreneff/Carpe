@@ -8,7 +8,10 @@ export DEVELOPER_DIR ?= /Applications/Xcode.app/Contents/Developer
 endif
 
 CONFIG  ?= Debug
-DERIVED := build
+# Spotlight skips folders named *.noindex, so the copies of Carpe.app in the
+# build output don't show up next to the installed one.
+DERIVED := build.noindex
+DIST    := dist.noindex
 APP     := $(DERIVED)/Build/Products/$(CONFIG)/Carpe.app
 BIN     := $(APP)/Contents/MacOS/Carpe
 XCB     := xcodebuild -project Carpe.xcodeproj -scheme Carpe -configuration $(CONFIG) \
@@ -47,7 +50,7 @@ extract: build
 	"$(BIN)" --extract "$(IMG)" $(if $(CALENDARS),--calendars "$(CALENDARS)")
 
 # Puts an optimised build in /Applications and starts it. Use this copy for
-# launch at login: the one in build/ disappears with `make clean`.
+# launch at login: the one in build.noindex/ disappears with `make clean`.
 INSTALLED := /Applications/Carpe.app
 install:
 	@$(MAKE) --no-print-directory build CONFIG=Release
@@ -60,9 +63,9 @@ install:
 check-secrets:
 	@scripts/check-secrets.sh
 
-# A notarized Carpe-<version>.dmg in dist/, for other people's Macs.
+# A notarized Carpe-<version>.dmg in dist.noindex/, for other people's Macs.
 release:
 	@scripts/release.sh
 
 clean:
-	rm -rf $(DERIVED) dist Carpe.xcodeproj
+	rm -rf $(DERIVED) $(DIST) Carpe.xcodeproj

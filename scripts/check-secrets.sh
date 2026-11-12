@@ -87,7 +87,7 @@ done
 # Not a failure: files git ignores never leave this Mac through the repository
 # or the app. Worth knowing they are in the folder, though.
 ignored=$(git ls-files --others --ignored --exclude-standard \
-    | grep -vE '^(build|dist|Carpe\.xcodeproj)/' | grep -E "$SECRET_FILES" | sed -E 's/[0-9]{6,}-[a-z0-9]{32}/<client ID>/; s/^/    /')
+    | grep -vE '^(build\.noindex|dist\.noindex|Carpe\.xcodeproj)/' | grep -E "$SECRET_FILES" | sed -E 's/[0-9]{6,}-[a-z0-9]{32}/<client ID>/; s/^/    /')
 if [ -n "$ignored" ]; then
     echo "note   ignored by git, so not in the repository, but in this folder:"
     echo "$ignored"

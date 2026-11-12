@@ -27,10 +27,7 @@ enum Permissions {
 
     /// macOS only applies a new Screen Recording grant to a fresh process.
     static func relaunch() {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        process.arguments = ["-n", Bundle.main.bundlePath]
-        try? process.run()
+        Relauncher.openAfterExit()
         NSApp.terminate(nil)
     }
 
