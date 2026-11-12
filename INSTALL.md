@@ -56,15 +56,12 @@ If you closed the window too early, click the menu bar icon and choose
 ## 3. Paste the API key
 
 Carpe uses Claude, an AI service from Anthropic, to read the screenshot. That
-needs an API key: a long piece of text that starts with `sk-ant-`.
+needs an API key: a long piece of text that starts with `sk-ant-`. Benjamin
+will send you a key; paste it into Settings → Anthropic API key:
 
 1. Click the menu bar icon and choose **Settings…**.
 2. Paste the key into **Anthropic API key**.
 3. Click **Save Key**. It should say *Saved in the Keychain*.
-
-If nobody gave you a key, you can create one at <https://platform.claude.com>
-under *API keys*. Anthropic charges for use; one screenshot costs a fraction of
-a cent.
 
 While you are in Settings:
 

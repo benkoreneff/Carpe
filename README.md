@@ -89,7 +89,9 @@ What the script does, stopping at the first step that fails:
    secure timestamp. The development signing in `project.yml` is overridden for
    this build only.
 4. Checks the result: signature, hardened runtime, timestamp, the calendar
-   entitlement, no `get-task-allow`, both architectures.
+   entitlement, no `get-task-allow`, both architectures. The binary is
+   stripped, and the script fails if any file in the bundle still contains a
+   `/Users/` path or the user name of the Mac that built it.
 5. Runs the secret check again on the app bundle, the executable included.
 6. Has Apple notarize the app and staples the ticket to it, so the app also
    opens on a Mac that is offline.
@@ -107,7 +109,8 @@ name and in Carpe's menu, on the grey line above *Quit Carpe*.
 `scripts/check-secrets.sh` also runs by itself (`make check-secrets`). It
 prints only the first characters of a match. A file that git ignores, such as a
 downloaded `client_secret_….json`, is reported as a note: it is in neither the
-repository nor the app.
+repository nor the app. No such file belongs in this folder; see
+[Google Cloud setup](#google-cloud-setup) for where the downloaded one is kept.
 
 On the Mac that builds it, the released app counts as a different app from the
 development build, because macOS ties permissions and Keychain items to the
@@ -398,6 +401,12 @@ the names below are from its current guides.
 6. Create the client: *Google Auth platform > Clients > Create Client*,
    application type **Desktop app**, any name, **Create**. Copy the client ID
    and the client secret straight away, or download the JSON.
+
+The downloaded `client_secret_….json` is kept outside the project, in
+`~/Documents/Carpe-secrets/`. Nothing in the code or the scripts reads it: it is
+only a backup of the two values, which Carpe takes from the fields in Settings
+and stores in the Keychain. `.gitignore` still excludes `client_secret*.json`
+in case one is ever saved into the project folder again.
 
 One thing to decide in step 5: while the app's publishing status is *Testing*,
 Google expires refresh tokens after 7 days, so Carpe would ask you to

@@ -88,12 +88,15 @@ rm -rf "$DERIVED"
 xcodegen generate --quiet
 # Overrides the development signing in project.yml for this build only.
 # No get-task-allow (Apple rejects debuggable apps), and a secure timestamp,
-# which notarization requires.
+# which notarization requires. Stripping removes the debug symbol table, which
+# otherwise lists every object file by its full path on this Mac, home folder
+# name included.
 xcodebuild -project Carpe.xcodeproj -scheme Carpe -configuration Release \
     -derivedDataPath "$DERIVED" -destination 'generic/platform=macOS' \
     ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
     CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Developer ID Application" DEVELOPMENT_TEAM="$TEAM" \
     CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO OTHER_CODE_SIGN_FLAGS="--timestamp" \
+    DEPLOYMENT_POSTPROCESSING=YES STRIP_INSTALLED_PRODUCT=YES \
     -quiet build
 [ -d "$APP" ] || fail "the build produced no $APP"
 
@@ -123,6 +126,15 @@ case "$ARCHS_BUILT" in
 esac
 echo "$SIGNATURE" | grep -E "^(Identifier|Authority=Developer ID Application|TeamIdentifier|Timestamp)"
 echo "Architectures: $ARCHS_BUILT"
+
+step "Looking for this Mac's paths in the app bundle"
+# Every byte of every file: the paths sit outside the sections `strings` reads
+# by default.
+if LC_ALL=C grep -raqE -e "/Users/|$(id -un)" -- "$APP"; then
+    LC_ALL=C grep -raclE -e "/Users/|$(id -un)" -- "$APP" | sed 's/^/    /'
+    fail "the app contains a path from this Mac or the user name $(id -un)"
+fi
+echo "No /Users/ path and no user name in the bundle"
 
 step "Looking for credentials in the app bundle"
 scripts/check-secrets.sh "$APP" || fail "the release stops here: see above."
