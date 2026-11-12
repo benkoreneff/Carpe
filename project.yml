@@ -31,6 +31,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.koreneff.carpe
         PRODUCT_NAME: Carpe
+        # The app icon, from Carpe/Assets.xcassets.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_HARDENED_RUNTIME: YES
         # Apple Calendar: the entitlement lets EventKit work under the hardened
         # runtime, and macOS shows the text when it asks for calendar access.

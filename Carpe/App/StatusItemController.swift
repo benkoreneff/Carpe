@@ -29,7 +29,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         self.hotKeys = hotKeys
         self.actions = actions
 
-        let icon = Self.symbol("calendar.badge.plus", "Carpe")
+        let icon = Self.menuBarIcon
         self.icon = icon
         super.init()
 
@@ -66,6 +66,20 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         case .needsAttention: item.button?.image = Self.symbol("exclamationmark.triangle.fill", "Carpe: needs attention")
         case nil: item.button?.image = icon
         }
+    }
+
+    /// Carpe's own glyph from the asset catalog, as a template image so macOS
+    /// draws it dark on a light menu bar and light on a dark one. The SF
+    /// Symbol stands in if the asset can't be loaded.
+    private static var menuBarIcon: NSImage? {
+        // A copy: `NSImage(named:)` hands out one shared instance.
+        guard let image = NSImage(named: "MenuBarIcon")?.copy() as? NSImage else {
+            return symbol("calendar.badge.plus", "Carpe")
+        }
+        image.size = NSSize(width: 18, height: 18)
+        image.isTemplate = true
+        image.accessibilityDescription = "Carpe"
+        return image
     }
 
     private static func symbol(_ name: String, _ description: String) -> NSImage? {
