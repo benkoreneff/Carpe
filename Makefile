@@ -32,11 +32,12 @@ test: gen
 		| grep -E "error:|✘|recorded an issue|Test run with|\*\* TEST" || true; \
 		exit $${PIPESTATUS[0]}
 
-# Fails if the app ended up ad-hoc signed, which would reset Screen Recording.
+# Fails if the app ended up ad-hoc signed or signed with another certificate
+# than the released app, either of which would reset its permissions.
 verify-signing:
-	@codesign -dvv "$(APP)" 2>&1 | grep -q "^Authority=Apple Development" \
-		|| { echo "error: $(APP) is not signed with an Apple Development identity"; exit 1; }
-	@codesign -dvv "$(APP)" 2>&1 | grep -E "^(Identifier|Authority=Apple Development|TeamIdentifier)"
+	@codesign -dvv "$(APP)" 2>&1 | grep -q "^Authority=Developer ID Application" \
+		|| { echo "error: $(APP) is not signed with the Developer ID Application certificate"; exit 1; }
+	@codesign -dvv "$(APP)" 2>&1 | grep -E "^(Identifier|Authority=Developer ID Application|TeamIdentifier)"
 
 stop:
 	@pkill -x Carpe || true

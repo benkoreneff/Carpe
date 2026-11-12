@@ -27,7 +27,7 @@ Events are saved to one calendar service, chosen at first run and under
 - macOS 14 or later
 - Xcode (the full app, not only the Command Line Tools)
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
-- An Apple Development signing identity. Check with
+- A Developer ID Application signing certificate. Check with
   `security find-identity -v -p codesigning`.
 
 ## Build and run
@@ -56,11 +56,18 @@ work in Xcode, run `make gen` and open it.
 
 ### Signing
 
-The app is signed with the `Apple Development` identity for team `375L8HDHKR`,
-and the bundle ID is fixed at `com.koreneff.carpe`. Both are set in
-`project.yml`. macOS ties the Screen Recording grant and the Keychain items to
-that pair, so an ad-hoc signature or a new bundle ID would make it ask again
-after every build. `make build` fails if the result is not signed this way.
+Every build is signed with the `Developer ID Application` certificate of team
+`375L8HDHKR`, and the bundle ID is fixed at `com.koreneff.carpe`. Both are set
+in `project.yml`. macOS ties the Screen Recording and Calendar grants and the
+Keychain items to that pair, so an ad-hoc signature or a new bundle ID would
+make it ask again after every build. `make build` fails if the result is not
+signed this way.
+
+Development builds use the same certificate as the released app on purpose.
+Signed with an Apple Development certificate, the copy in the build folder and
+the copy in `/Applications` were two different apps to macOS that shared one
+bundle ID: only one of them could hold the Screen Recording grant, and the
+other asked for the login password for each saved key.
 
 ## Releasing to other Macs
 
@@ -92,8 +99,8 @@ What the script does, stopping at the first step that fails:
    tokens in every file git tracks or would track, and in every commit.
 3. Builds the Release configuration as a universal binary (Apple silicon and
    Intel), signed with the Developer ID certificate, the hardened runtime and a
-   secure timestamp. The development signing in `project.yml` is overridden for
-   this build only.
+   secure timestamp. Unlike a development build, it is not debuggable (no
+   `get-task-allow`).
 4. Checks the result: signature, hardened runtime, timestamp, the calendar
    entitlement, no `get-task-allow`, both architectures. The binary is
    stripped, and the script fails if any file in the bundle still contains a
@@ -121,10 +128,9 @@ downloaded `client_secret_….json`, is reported as a note: it is in neither the
 repository nor the app. No such file belongs in this folder; see
 [Google Cloud setup](#google-cloud-setup) for where the downloaded one is kept.
 
-On the Mac that builds it, the released app counts as a different app from the
-development build, because macOS ties permissions and Keychain items to the
-signing certificate. Opening it there asks for Screen Recording and Calendar
-again, and for the login password to read the saved keys.
+On the Mac that builds it, the released app and the development build count as
+the same app, because they share the bundle ID and the signing certificate.
+They use the same permissions, Keychain items and settings.
 
 ## First run
 

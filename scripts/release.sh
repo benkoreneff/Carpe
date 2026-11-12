@@ -89,8 +89,8 @@ DIST="dist.noindex"
 APP="$DERIVED/Build/Products/Release/Carpe.app"
 rm -rf "$DERIVED"
 xcodegen generate --quiet
-# Overrides the development signing in project.yml for this build only.
-# No get-task-allow (Apple rejects debuggable apps), and a secure timestamp,
+# Same certificate as the development builds, but for this build only: no
+# get-task-allow (Apple rejects debuggable apps), and a secure timestamp,
 # which notarization requires. Stripping removes the debug symbol table, which
 # otherwise lists every object file by its full path on this Mac, home folder
 # name included.
