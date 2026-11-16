@@ -2,7 +2,8 @@
 # Builds Carpe for other people's Macs: a universal Release build signed with
 # the Developer ID Application certificate and the hardened runtime, notarized
 # by Apple, stapled, and packed into dist.noindex/Carpe-<version>.dmg with an
-# Applications shortcut.
+# Applications shortcut. A copy named dist.noindex/Carpe.dmg is made for the
+# download link that always points at the latest release.
 #
 #   scripts/release.sh                       the real thing
 #   scripts/release.sh --skip-notarization   everything except Apple's part, to
@@ -24,7 +25,7 @@ NOTARIZE=1
 for arg in "$@"; do
     case "$arg" in
         --skip-notarization) NOTARIZE=0 ;;
-        -h|--help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "error: unknown option $arg (try --help)"; exit 2 ;;
     esac
 done
@@ -202,10 +203,23 @@ if [ "$NOTARIZE" -eq 1 ]; then
     step "Asking Gatekeeper"
     spctl --assess --type execute -vv "$APP" 2>&1
     spctl --assess --type open --context context:primary-signature -vv "$DMG" 2>&1
+
+    # The same image under a name without the version, so that the link
+    # releases/latest/download/Carpe.dmg always fetches the newest one. The
+    # signature and the notarization ticket are inside the file and come along.
+    step "Copying the disk image to Carpe.dmg"
+    LATEST="$DIST/Carpe.dmg"
+    cp "$DMG" "$LATEST"
+    cmp -s "$DMG" "$LATEST" || fail "$LATEST is not an exact copy of $DMG"
+    xcrun stapler validate "$LATEST"
+    spctl -a -vv -t open --context context:primary-signature "$LATEST" 2>&1
 fi
 
 step "Done"
 echo "$DMG ($(du -h "$DMG" | awk '{print $1}'))"
+if [ "$NOTARIZE" -eq 1 ]; then
+    echo "$LATEST (the same file)"
+fi
 echo "SHA-256: $(shasum -a 256 "$DMG" | awk '{print $1}')"
 if [ "$NOTARIZE" -eq 0 ]; then
     echo "Not notarized: other Macs will refuse to open it. Run without --skip-notarization for the release."

@@ -20,6 +20,7 @@ make test     # unit tests
 make build    # build only
 make install  # optimised build into /Applications, then launch it
 make release  # notarized Carpe-<version>.dmg for other Macs, see below
+make publish  # GitHub release for the current version's tag, see below
 make check-secrets  # look for credentials in the files and the git history
 make clean    # remove build output, the generated project, and dist.noindex/
 ```
@@ -71,8 +72,9 @@ other asked for the login password for each saved key.
 
 `scripts/release.sh` (or `make release`) produces
 `dist.noindex/Carpe-<version>.dmg`, which Gatekeeper accepts on any Mac with
-macOS 14 or later. The first launch still shows the usual question about an app
-downloaded from the internet.
+macOS 14 or later, and a copy of it named `dist.noindex/Carpe.dmg`. The first
+launch still shows the usual question about an app downloaded from the
+internet.
 
 One-time setup:
 
@@ -109,6 +111,8 @@ What the script does, stopping at the first step that fails:
 7. Packs the app and an Applications shortcut into the disk image, signs it,
    has Apple notarize that too, staples it, and asks Gatekeeper for its verdict
    on both.
+8. Copies the disk image to `Carpe.dmg` and checks the copy: same bytes, the
+   stapled ticket, Gatekeeper's verdict.
 
 `scripts/release.sh --skip-notarization` does everything except Apple's part
 and names the image `-unnotarized`, to try the build. Other Macs refuse to open
@@ -119,6 +123,26 @@ itself to Applications, like any release copy outside that folder.
 
 The version is `MARKETING_VERSION` in `project.yml`. It is in the disk image's
 name and in Carpe's menu, on the grey line above *Quit Carpe*.
+
+### Publishing on GitHub
+
+The README's download link is
+`https://github.com/benkoreneff/Carpe/releases/latest/download/Carpe.dmg`.
+GitHub serves it from the newest release, so every release needs a file with
+exactly that name. That is what `Carpe.dmg` is for.
+
+```sh
+git tag -a v<version> -m "Carpe <version>"
+git push origin main v<version>
+make publish                  # or: make publish NOTES=notes.md
+```
+
+`scripts/publish.sh` (or `make publish`) creates the GitHub release for the tag
+`v<version>` and attaches `Carpe-<version>.dmg` and `Carpe.dmg`. The release
+notes are the install steps and the SHA-256, below the contents of `NOTES` if
+one is given. It creates nothing if the tag is missing here or on GitHub, if
+either disk image is missing, if `Carpe.dmg` is not a copy of the versioned
+one, if either is not notarized, or if the release already exists.
 
 `scripts/check-secrets.sh` also runs by itself (`make check-secrets`). It
 prints only the first characters of a match. A file that git ignores, such as a
@@ -334,6 +358,7 @@ that, and a release doesn't build without it passing.
 project.yml            XcodeGen project definition, signing settings,
                        version, calendar usage text
 scripts/release.sh     Signed, notarized disk image for other Macs
+scripts/publish.sh     GitHub release with the two disk images attached
 scripts/check-secrets.sh
                        Looks for credentials in files, history and a bundle
 scripts/make-icons.py  Draws the app icon and the menu bar glyph (needs Pillow)

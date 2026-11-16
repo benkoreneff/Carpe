@@ -17,7 +17,7 @@ BIN     := $(APP)/Contents/MacOS/Carpe
 XCB     := xcodebuild -project Carpe.xcodeproj -scheme Carpe -configuration $(CONFIG) \
            -derivedDataPath $(DERIVED) -destination 'platform=macOS,arch=$(shell uname -m)'
 
-.PHONY: gen build test run stop verify-signing extract install clean check-secrets release
+.PHONY: gen build test run stop verify-signing extract install clean check-secrets release publish
 
 gen:
 	xcodegen generate --quiet
@@ -64,9 +64,15 @@ install:
 check-secrets:
 	@scripts/check-secrets.sh
 
-# A notarized Carpe-<version>.dmg in dist.noindex/, for other people's Macs.
+# A notarized Carpe-<version>.dmg in dist.noindex/, for other people's Macs,
+# and a copy of it named Carpe.dmg.
 release:
 	@scripts/release.sh
+
+# The GitHub release for the current version's tag, with Carpe-<version>.dmg
+# and Carpe.dmg attached. Optional: make publish NOTES=notes.md
+publish:
+	@scripts/publish.sh $(NOTES)
 
 clean:
 	rm -rf $(DERIVED) $(DIST) Carpe.xcodeproj
